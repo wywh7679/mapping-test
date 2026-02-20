@@ -31,4 +31,10 @@ public interface ApplicationsDataDao {
 
     @Query("DELETE from applications_data")
     void deleteAll();
+
+    @Query("DELETE from applications_data WHERE aid=:aid")
+    void deleteByAid(int aid);
+
+    @Query("DELETE from applications_data WHERE lid=:lid")
+    void deleteByLid(int lid);
 }

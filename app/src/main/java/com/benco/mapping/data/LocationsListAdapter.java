@@ -1,9 +1,6 @@
 package com.benco.mapping.data;
 
-import static androidx.core.content.ContextCompat.startActivity;
-
 import android.content.Intent;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,18 +11,21 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.benco.mapping.ApplicationsActivity;
-import com.benco.mapping.HomeActivity;
-import com.benco.mapping.LocationsActivity;
 import com.benco.mapping.R;
-import com.benco.mapping.SettingsActivity;
 
 import java.util.ArrayList;
 
-public class LocationsListAdapter  extends RecyclerView.Adapter<LocationsListAdapter.LocationsViewHolder> {
+public class LocationsListAdapter extends RecyclerView.Adapter<LocationsListAdapter.LocationsViewHolder> {
     ArrayList<Locations> locationsArrayList;
+    private final OnLocationDeleteListener onLocationDeleteListener;
 
-    public LocationsListAdapter(ArrayList<Locations> locations) {
+    public interface OnLocationDeleteListener {
+        void onDeleteRequested(Locations location);
+    }
+
+    public LocationsListAdapter(ArrayList<Locations> locations, OnLocationDeleteListener onLocationDeleteListener) {
         this.locationsArrayList = locations;
+        this.onLocationDeleteListener = onLocationDeleteListener;
     }
 
     @NonNull
@@ -39,30 +39,21 @@ public class LocationsListAdapter  extends RecyclerView.Adapter<LocationsListAda
     @Override
     public void onBindViewHolder(@NonNull LocationsViewHolder holder, int position) {
         holder.editLocationsName.setText(locationsArrayList.get(position).name);
-        holder.listLocationsViewButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Start Applications
-                Intent intent = new Intent(holder.itemView.getContext(), ApplicationsActivity.class);
-                intent.putExtra("lid", locationsArrayList.get(holder.getAdapterPosition()).lid); // Pass the ID or any other data
-                holder.itemView.getContext().startActivity(intent);
-
+        holder.listLocationsViewButton.setOnClickListener(v -> {
+            Intent intent = new Intent(holder.itemView.getContext(), ApplicationsActivity.class);
+            intent.putExtra("lid", locationsArrayList.get(holder.getAdapterPosition()).lid);
+            holder.itemView.getContext().startActivity(intent);
+        });
+        holder.listLocationsEditButton.setOnClickListener(v -> {
+            Intent intent = new Intent(holder.itemView.getContext(), ApplicationsActivity.class);
+            intent.putExtra("lid", locationsArrayList.get(holder.getAdapterPosition()).lid);
+            holder.itemView.getContext().startActivity(intent);
+        });
+        holder.listLocationsDeleteButton.setOnClickListener(v -> {
+            if (onLocationDeleteListener != null) {
+                onLocationDeleteListener.onDeleteRequested(locationsArrayList.get(holder.getAdapterPosition()));
             }
         });
-        holder.listLocationsEditButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Start Applications
-                Intent intent = new Intent(holder.itemView.getContext(), ApplicationsActivity.class);
-                intent.putExtra("lid", locationsArrayList.get(holder.getAdapterPosition()).lid); // Pass the ID or any other data
-                holder.itemView.getContext().startActivity(intent);
-
-            }
-        });
-        /*holder.editLocationsALineLat.setText(String.format("%s", locationsArrayList.get(position).aLineLat));
-        holder.editLocationsALineLng.setText(String.format("%s", locationsArrayList.get(position).aLineLng));
-        holder.editLocationsBLineLat.setText(String.format("%s", locationsArrayList.get(position).bLineLat));
-        holder.editLocationsBLineLng.setText(String.format("%s", locationsArrayList.get(position).bLineLng));*/
     }
 
     @Override
@@ -74,10 +65,7 @@ public class LocationsListAdapter  extends RecyclerView.Adapter<LocationsListAda
         TextView editLocationsName;
         Button listLocationsViewButton;
         Button listLocationsEditButton;
-        TextView editLocationsALineLat;
-        TextView editLocationsALineLng;
-        TextView editLocationsBLineLat;
-        TextView editLocationsBLineLng;
+        Button listLocationsDeleteButton;
 
         public LocationsViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -88,10 +76,7 @@ public class LocationsListAdapter  extends RecyclerView.Adapter<LocationsListAda
             editLocationsName = itemView.findViewById(R.id.listLocationsName);
             listLocationsViewButton = itemView.findViewById(R.id.listLocationsViewButton);
             listLocationsEditButton = itemView.findViewById(R.id.listLocationsEditButton);
-           /* editLocationsALineLat = itemView.findViewById(R.id.editLocationsALineLat);
-            editLocationsALineLng = itemView.findViewById(R.id.editLocationsALineLng);
-            editLocationsBLineLat = itemView.findViewById(R.id.editLocationsBLineLat);
-            editLocationsBLineLng = itemView.findViewById(R.id.editLocationsBLineLng);*/
+            listLocationsDeleteButton = itemView.findViewById(R.id.listLocationsDeleteButton);
         }
     }
 }

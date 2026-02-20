@@ -25,4 +25,12 @@ public class LocationsRepository {
         listLocations = locationsDao.getLocations();
         return listLocations;
     }
+
+    public void deleteLocationById(int lid) {
+        LocationsRoomDatabase.databaseWriteExecutor.execute(() -> {
+            locationsRoomDatabase.applicationsDataDao().deleteByLid(lid);
+            locationsRoomDatabase.applicationsDao().deleteApplicationsByLid(lid);
+            locationsDao.deleteLocationById(lid);
+        });
+    }
 }

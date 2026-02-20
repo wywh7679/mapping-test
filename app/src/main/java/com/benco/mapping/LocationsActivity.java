@@ -1,23 +1,20 @@
 package com.benco.mapping;
 
 import android.app.Dialog;
-import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.benco.mapping.data.Applications;
 import com.benco.mapping.data.Locations;
 import com.benco.mapping.data.LocationsListAdapter;
 import com.benco.mapping.domain.LocationsViewModel;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.concurrent.ExecutionException;
 
 public class LocationsActivity extends BaseActivity {
@@ -25,6 +22,7 @@ public class LocationsActivity extends BaseActivity {
     private Button addNewLocation;
     private Button backButton;
     LocationsViewModel locationsViewDModel;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,28 +31,32 @@ public class LocationsActivity extends BaseActivity {
 
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        locationsViewDModel.getAllLocationsFromVm().observe(this, locations ->
-        {
+        locationsViewDModel.getAllLocationsFromVm().observe(this, locations -> {
             if (locations != null && !locations.isEmpty()) {
-                LocationsListAdapter adapter = new LocationsListAdapter((ArrayList<Locations>) locations);
+                LocationsListAdapter adapter = new LocationsListAdapter((ArrayList<Locations>) locations,
+                        this::showDeleteLocationConfirmation);
                 recyclerView.setAdapter(adapter);
+            } else {
+                recyclerView.setAdapter(null);
             }
         });
-        Button addNewLocationOrig;
+
         addNewLocation = findViewById(R.id.newLocationButton);
-        addNewLocation.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                showInputDialog();
-            }
-        });
+        addNewLocation.setOnClickListener(v -> showInputDialog());
+
         backButton = findViewById(R.id.backButton);
-        backButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish(); // Closes the current activity and returns to the previous one
-            }
-        });
+        backButton.setOnClickListener(v -> finish());
     }
+
+    private void showDeleteLocationConfirmation(Locations location) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Location")
+                .setMessage("Delete location '" + location.name + "' and all applications for it?")
+                .setPositiveButton("Delete", (dialog, which) -> locationsViewDModel.deleteLocationById(location.lid))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private void showInputDialog() {
         Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.locations_dialog);
@@ -66,19 +68,16 @@ public class LocationsActivity extends BaseActivity {
             if (!name.isEmpty()) {
                 Locations location = new Locations(name, "config");
                 new Thread(() -> {
-                    long id = 0;
+                    long id;
                     try {
                         id = locationsViewDModel.insertLocations(location);
-                    } catch (ExecutionException e) {
-                        throw new RuntimeException(e);
-                    } catch (InterruptedException e) {
+                    } catch (ExecutionException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                     final long newId = id;
                     runOnUiThread(() -> {
-                        // Use the ID as needed
                         System.out.println("Inserted ID: " + newId);
-                        dialog.dismiss(); // Close the dialog
+                        dialog.dismiss();
                     });
                 }).start();
             }
@@ -86,5 +85,4 @@ public class LocationsActivity extends BaseActivity {
 
         dialog.show();
     }
-
 }

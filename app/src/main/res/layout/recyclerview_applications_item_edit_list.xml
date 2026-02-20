@@ -17,13 +17,24 @@
         tools:text="" />
 
     <Button
+        android:id="@+id/listApplicationDeleteButton"
+        android:layout_width="wrap_content"
+        android:minWidth="78dp"
+        android:layout_height="wrap_content"
+        android:text="Delete"
+        android:padding="5dp"
+        app:layout_constraintRight_toLeftOf="@+id/listApplicationEditButton"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <Button
         android:id="@+id/listApplicationEditButton"
         android:layout_width="wrap_content"
         android:minWidth="78dp"
         android:layout_height="wrap_content"
         android:text="View"
         android:padding="5dp"
-        app:layout_constraintRight_toLeftOf="@+id/listApplicationEditButton3d" />
+        app:layout_constraintRight_toLeftOf="@+id/listApplicationEditButton3d"
+        app:layout_constraintBottom_toBottomOf="parent" />
     <Button
         android:id="@+id/listApplicationEditButton3d"
         android:layout_width="wrap_content"

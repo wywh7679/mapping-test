@@ -378,12 +378,12 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         };
 
         // Android bitmap rows are top-to-bottom while OpenGL UV origin is bottom-left.
-        // Basemap tiles also render mirrored in this scene, so flip both axes for basemap only.
+        // Flip only V for basemap so tiles are upright without horizontal mirroring.
         float[] basemapQuadUvs = {
-                1f, 1f,
                 0f, 1f,
-                1f, 0f,
-                0f, 0f
+                1f, 1f,
+                0f, 0f,
+                1f, 0f
         };
 
         fullscreenVertexBuffer = ByteBuffer.allocateDirect(quadVerts.length * 4)

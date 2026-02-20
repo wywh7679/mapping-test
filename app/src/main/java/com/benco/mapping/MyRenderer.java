@@ -97,7 +97,10 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private int fullscreenProgram;
     private FloatBuffer fullscreenVertexBuffer;
     private FloatBuffer fullscreenUvBuffer;
-    private FloatBuffer basemapUvBuffer;
+    private FloatBuffer basemapVertexBuffer;
+    private FloatBuffer basemapTexCoordBuffer;
+    private FloatBuffer basemapColorBuffer;
+    private float basemapWorldSize = 200000f;
     private int basemapTextureId;
     private boolean showBasemap = false;
     private float basemapAlpha = 0.5f;
@@ -377,15 +380,6 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 1f, 1f
         };
 
-        // Android bitmap rows are top-to-bottom while OpenGL UV origin is bottom-left.
-        // Flip only V for basemap so tiles are upright without horizontal mirroring.
-        float[] basemapQuadUvs = {
-                0f, 1f,
-                1f, 1f,
-                0f, 0f,
-                1f, 0f
-        };
-
         fullscreenVertexBuffer = ByteBuffer.allocateDirect(quadVerts.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer();
@@ -396,10 +390,7 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 .asFloatBuffer();
         fullscreenUvBuffer.put(quadUvs).position(0);
 
-        basemapUvBuffer = ByteBuffer.allocateDirect(basemapQuadUvs.length * 4)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer();
-        basemapUvBuffer.put(basemapQuadUvs).position(0);
+        rebuildBasemapQuad();
 
         // Compile fullscreen shader program
         fullscreenProgram = createProgram(
@@ -665,11 +656,82 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     }
 
     private void drawBasemap() {
-        if (!showBasemap || basemapTextureId == 0) {
+        if (!showBasemap || basemapTextureId == 0 || basemapVertexBuffer == null || basemapTexCoordBuffer == null || basemapColorBuffer == null) {
             return;
         }
-        drawFullscreenTexture(basemapTextureId, basemapAlpha, basemapUvBuffer);
+
+        GLES20.glUseProgram(texturedProgram);
+
+        int positionHandle = glGetAttribLocation(texturedProgram, "a_Position");
+        int texCoordHandle = glGetAttribLocation(texturedProgram, "a_TexCoord");
+        int colorHandle = glGetAttribLocation(texturedProgram, "a_Color");
+        int textureHandle = GLES20.glGetUniformLocation(texturedProgram, "u_Texture");
+        int mvpMatrixHandle = GLES20.glGetUniformLocation(texturedProgram, "u_ModelViewProjectionMatrix");
+
+        float snappedX = Math.round(vehicleX / gridStep) * gridStep;
+        float snappedZ = Math.round(vehicleZ / gridStep) * gridStep;
+        Matrix.setIdentityM(gridModelMatrix, 0);
+        Matrix.rotateM(gridModelMatrix, 0, -gridAzimuth, 0f, 1f, 0f);
+        Matrix.translateM(gridModelMatrix, 0, snappedX, 0f, snappedZ);
+
+        final float[] temp = new float[16];
+        Matrix.multiplyMM(temp, 0, viewMatrix, 0, gridModelMatrix, 0);
+        Matrix.multiplyMM(modelViewProjectionMatrix, 0, projectionMatrix, 0, temp, 0);
+        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, modelViewProjectionMatrix, 0);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, basemapTextureId);
+        GLES20.glUniform1i(textureHandle, 0);
+
+        basemapVertexBuffer.position(0);
+        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, basemapVertexBuffer);
+        GLES20.glEnableVertexAttribArray(positionHandle);
+
+        basemapTexCoordBuffer.position(0);
+        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 0, basemapTexCoordBuffer);
+        GLES20.glEnableVertexAttribArray(texCoordHandle);
+
+        basemapColorBuffer.position(0);
+        GLES20.glVertexAttribPointer(colorHandle, 4, GLES20.GL_FLOAT, false, 0, basemapColorBuffer);
+        GLES20.glEnableVertexAttribArray(colorHandle);
+
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+
+        GLES20.glDisableVertexAttribArray(positionHandle);
+        GLES20.glDisableVertexAttribArray(texCoordHandle);
+        GLES20.glDisableVertexAttribArray(colorHandle);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
     }
+    private void rebuildBasemapQuad() {
+        float half = basemapWorldSize * 0.5f;
+        float y = -0.02f;
+        float[] vertices = new float[]{
+                -half, y, -half,
+                 half, y, -half,
+                -half, y,  half,
+                 half, y,  half
+        };
+        float[] uvs = new float[]{
+                0f, 1f,
+                1f, 1f,
+                0f, 0f,
+                1f, 0f
+        };
+        basemapVertexBuffer = buildFloatBuffer(vertices);
+        basemapTexCoordBuffer = buildFloatBuffer(uvs);
+        rebuildBasemapColorBuffer();
+    }
+
+    private void rebuildBasemapColorBuffer() {
+        float[] colors = new float[]{
+                1f, 1f, 1f, basemapAlpha,
+                1f, 1f, 1f, basemapAlpha,
+                1f, 1f, 1f, basemapAlpha,
+                1f, 1f, 1f, basemapAlpha
+        };
+        basemapColorBuffer = buildFloatBuffer(colors);
+    }
+
     private void drawFullscreenTexture(int textureId, float alpha, FloatBuffer uvBuffer) {
         GLES20.glUseProgram(fullscreenProgram);
 
@@ -1107,6 +1169,12 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     public void setBasemapDisplay(boolean show, float alpha) {
         this.showBasemap = show;
         this.basemapAlpha = Math.max(0.05f, Math.min(alpha, 1.0f));
+        rebuildBasemapColorBuffer();
+    }
+
+    public void setBasemapWorldSize(float worldSize) {
+        this.basemapWorldSize = Math.max(1000f, worldSize);
+        rebuildBasemapQuad();
     }
 
     private int createSolidTexture(int color) {

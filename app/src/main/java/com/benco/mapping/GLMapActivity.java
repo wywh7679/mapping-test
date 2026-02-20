@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Canvas;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.HttpURLConnection;
@@ -879,10 +880,11 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                         "https://tile.openstreetmap.org/%d/%d/%d.png"
                 };
 
+                final int tileGrid = 3;
+                final int radius = tileGrid / 2;
                 Bitmap bitmap = null;
                 for (String template : tileTemplates) {
-                    String tileUrl = String.format(template, zoom, tileX, tileY);
-                    bitmap = tryFetchTile(tileUrl);
+                    bitmap = tryFetchTileMosaic(template, zoom, tileX, tileY, radius);
                     if (bitmap != null) {
                         break;
                     }
@@ -890,10 +892,15 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
 
                 if (bitmap != null) {
                     Bitmap finalBitmap = bitmap;
-                    glSurfaceView.queueEvent(() -> renderer.setBasemapBitmap(finalBitmap));
+                    float tileWorldSize = calculateWorldUnitsPerTile(center.lat, zoom);
+                    float basemapWorldSize = tileWorldSize * tileGrid;
+                    glSurfaceView.queueEvent(() -> {
+                        renderer.setBasemapBitmap(finalBitmap);
+                        renderer.setBasemapWorldSize(basemapWorldSize);
+                    });
                     glSurfaceView.requestRender();
                 } else {
-                    Log.e(TAG, "Failed to load basemap tile from all providers.");
+                    Log.e(TAG, "Failed to load basemap tile mosaic from all providers.");
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load OpenFreeMap tile", e);
@@ -910,6 +917,74 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         return (int) Math.floor((1.0 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2.0 * (1 << zoom));
     }
 
+    private float calculateWorldUnitsPerTile(double latitude, int zoom) {
+        double metersPerPixel = 156543.03392 * Math.cos(Math.toRadians(latitude)) / (1 << zoom);
+        double metersPerTile = metersPerPixel * 256.0;
+        return (float) (metersPerTile / 0.0254); // world units are inches
+    }
+
+    private Bitmap tryFetchTileMosaic(String template, int zoom, int centerTileX, int centerTileY, int radius) {
+        int gridSize = radius * 2 + 1;
+        Bitmap[][] tiles = new Bitmap[gridSize][gridSize];
+        int tilePixelSize = 256;
+
+        for (int row = -radius; row <= radius; row++) {
+            for (int col = -radius; col <= radius; col++) {
+                int x = normalizeTileX(centerTileX + col, zoom);
+                int y = centerTileY + row;
+                int maxTileY = (1 << zoom) - 1;
+                if (y < 0 || y > maxTileY) {
+                    recycleTiles(tiles);
+                    return null;
+                }
+
+                String tileUrl = String.format(template, zoom, x, y);
+                Bitmap tile = tryFetchTile(tileUrl);
+                if (tile == null) {
+                    recycleTiles(tiles);
+                    return null;
+                }
+
+                if (tile.getWidth() <= 0 || tile.getHeight() <= 0) {
+                    tile.recycle();
+                    recycleTiles(tiles);
+                    return null;
+                }
+
+                tilePixelSize = tile.getWidth();
+                tiles[row + radius][col + radius] = tile;
+            }
+        }
+
+        Bitmap mosaic = Bitmap.createBitmap(tilePixelSize * gridSize, tilePixelSize * gridSize, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(mosaic);
+        for (int row = 0; row < gridSize; row++) {
+            for (int col = 0; col < gridSize; col++) {
+                Bitmap tile = tiles[row][col];
+                if (tile != null) {
+                    canvas.drawBitmap(tile, col * tilePixelSize, row * tilePixelSize, null);
+                    tile.recycle();
+                }
+            }
+        }
+        return mosaic;
+    }
+
+    private void recycleTiles(Bitmap[][] tiles) {
+        for (Bitmap[] row : tiles) {
+            for (Bitmap tile : row) {
+                if (tile != null && !tile.isRecycled()) {
+                    tile.recycle();
+                }
+            }
+        }
+    }
+
+    private int normalizeTileX(int tileX, int zoom) {
+        int maxTiles = 1 << zoom;
+        int normalized = tileX % maxTiles;
+        return normalized < 0 ? normalized + maxTiles : normalized;
+    }
 
     private Bitmap tryFetchTile(String tileUrl) {
         HttpURLConnection connection = null;

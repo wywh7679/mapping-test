@@ -22,6 +22,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.tabs.TabLayout;
+
 import java.util.function.BiConsumer;
 public class SettingsActivity extends BaseActivity {
     private ImageView homeBtn;
@@ -32,8 +34,11 @@ public class SettingsActivity extends BaseActivity {
     private int currentStep = 0;
     private int totalSections;
     private int currentRow = 0;
-    private Button backButton, nextButton, doneButton;
+    private Button wizardBackButton, nextButton, doneButton, closeButton;
     private TableRow[] tableRows;
+    private View vehicleTabContent;
+    private View displayTabContent;
+    private View sprayerTabContent;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,6 +59,29 @@ public class SettingsActivity extends BaseActivity {
                 Intent intent = new Intent(SettingsActivity.this, MainActivity.class);
                 finish();
                 startActivity(intent);
+            }
+        });
+
+        TabLayout settingsTabs = findViewById(R.id.settings_tabs);
+        vehicleTabContent = findViewById(R.id.tab_vehicle_content);
+        displayTabContent = findViewById(R.id.tab_display_content);
+        sprayerTabContent = findViewById(R.id.tab_sprayer_content);
+
+        settingsTabs.addTab(settingsTabs.newTab().setText("Vehicle Settings"));
+        settingsTabs.addTab(settingsTabs.newTab().setText("Display Settings"));
+        settingsTabs.addTab(settingsTabs.newTab().setText("Sprayer Configuration"));
+        settingsTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                showTab(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
             }
         });
         Button colorPickerButton = findViewById(R.id.color_picker_button);
@@ -88,21 +116,28 @@ public class SettingsActivity extends BaseActivity {
         // Handle focus change
         totalNumberSections.setOnFocusChangeListener(settingsEditTextFocusListener);
 
-        backButton = findViewById(R.id.back_button);
+        wizardBackButton = findViewById(R.id.back_button);
         nextButton = findViewById(R.id.next_button);
         doneButton = findViewById(R.id.done_button);
-        backButton.setOnClickListener(v -> showPreviousStep());
+        wizardBackButton.setOnClickListener(v -> showPreviousStep());
         nextButton.setOnClickListener(v -> showNextStep());
         doneButton.setOnClickListener(v -> finishWizard());
-        backButton = findViewById(R.id.backButton);
-        backButton.setOnClickListener(new View.OnClickListener() {
+        closeButton = findViewById(R.id.backButton);
+        closeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 finish(); // Closes the current activity and returns to the previous one
             }
         });
+        showTab(0);
         startForm();
     }
+    private void showTab(int position) {
+        vehicleTabContent.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
+        displayTabContent.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
+        sprayerTabContent.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+    }
+
     private void startForm() {
         Integer sectionTotal = Integer.parseInt(totalNumberSections.getText().toString());
         totalSections = sectionTotal;
@@ -287,7 +322,7 @@ public class SettingsActivity extends BaseActivity {
             int step = Integer.parseInt(tableRows[i].getTag().toString());
             tableRows[i].setVisibility(step == currentStep ? View.VISIBLE : View.GONE);
         }
-        backButton.setVisibility(currentStep > 0 ? View.VISIBLE : View.GONE);
+        wizardBackButton.setVisibility(currentStep > 0 ? View.VISIBLE : View.GONE);
         nextButton.setVisibility(currentStep < totalSections ? View.VISIBLE : View.GONE);
         doneButton.setVisibility(currentStep == totalSections ? View.VISIBLE : View.GONE);
     }

@@ -10,6 +10,9 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -100,6 +103,8 @@ public class SettingsActivity extends BaseActivity {
                 showDynamicColorPickerDialog("thickPathColor", v, true);
             }
         });
+        bindDisplaySettings();
+
         EditText thickPathStroke = findViewById(R.id.thickPathStroke);
 
         thickPathStroke.setText(settings.get("thickPathStroke").toString());

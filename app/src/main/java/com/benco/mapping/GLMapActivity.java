@@ -332,6 +332,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         speedLabel = findViewById(R.id.speedLabel);
         headingLabel = findViewById(R.id.headingLabel);
         distanceLabel = findViewById(R.id.distanceLabel);
+        applyDisplaySettings();
         zoomSeekBar = findViewById(R.id.zoomSeekBar);
         zoomSeekBar.incrementProgressBy(10);
         ImageView homeBtn = findViewById(R.id.homeBtn);
@@ -444,7 +445,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                 appData.bLine = bLine;
                 appData.timestamp = location.getTime();
                 AppDataVM.insertApplications(appData);
-                speedLabel.setText(Math.round(currentSpeed)+"");
+                speedLabel.setText(formatSpeed(currentSpeed));
                 headingLabel.setText(Math.round(location.getBearing())+"");
                 compass.setRotation(location.getBearing());
                 // Toast.makeText(MainActivity.getAppContext(), "Location Changed " + lat + " " + lng + " " + currentSpeed+" "+azimuth, Toast.LENGTH_SHORT).show();
@@ -607,6 +608,16 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             int thickColor = parseConfigInt(currentConfigJson, "thickPathColor", Color.RED);
             int thickWidth = parseConfigInt(currentConfigJson, "thickPathStroke", 120);
             renderer.setPathWidths(thickWidth, thickColor);
+
+            boolean showGrid = parseSettingBoolean("showGrid", true);
+            boolean showSolidBackground = parseSettingBoolean("showSolidBackground", true);
+            boolean showABLines = parseSettingBoolean("showABLines", true);
+            boolean showSteeringLines = parseSettingBoolean("showSteeringLines", true);
+            renderer.setDisplayToggles(showGrid, showSolidBackground, showABLines, showSteeringLines);
+            renderer.setGridColor(parseSettingColor("gridColor", Color.parseColor("#C0780000")));
+            renderer.setGridBackgroundColor(parseSettingColor("backgroundColor", Color.parseColor("#C71F1F1F")));
+            renderer.setAbLineColor(parseSettingColor("abLineColor", Color.GREEN));
+            renderer.setSteeringLineColor(parseSettingColor("steeringLineColor", Color.BLUE));
         });
         AppVM.getAllApplicationsByLid(lid).observe(this, applications -> {
             for (Applications application : applications) {
@@ -658,10 +669,20 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             bearing = absPoints.get(i).bearing;
         }
         String distanceText;
-        if (distance/12 < 1320) {
-            distanceText = round(distance / 12, 2)+" ft";
+        boolean useMetric = isMetricUnits();
+        if (useMetric) {
+            double meters = distance * 0.0254;
+            if (meters < 1000) {
+                distanceText = round(meters, 2) + " m";
+            } else {
+                distanceText = round(meters / 1000, 2) + " km";
+            }
         } else {
-            distanceText = round(distance / 12 / 5280, 2)+" mi";
+            if (distance/12 < 1320) {
+                distanceText = round(distance / 12, 2)+" ft";
+            } else {
+                distanceText = round(distance / 12 / 5280, 2)+" mi";
+            }
         }
         distanceLabel.setText(distanceText);
         headingLabel.setText(Math.round(bearing)+"");
@@ -669,6 +690,77 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
     public void setValue(String value) { aidText.setValue(value); applicationIdEditText.setText(value); }
     public static LiveData<String> getText() {
         return aidText;
+    }
+
+    private void applyDisplaySettings() {
+        float multiplier = parseSettingFloat("textScaleMultiplier", 1.0f);
+        applyTextSizeMultiplier(multiplier);
+        speedLabel.setText(formatSpeed(0f));
+    }
+
+    private void applyTextSizeMultiplier(float multiplier) {
+        float safeMultiplier = Math.max(0.7f, Math.min(multiplier, 2.0f));
+        List<TextView> labels = new ArrayList<>();
+        labels.add(gridSizeLabel);
+        labels.add(speedLabel);
+        labels.add(headingLabel);
+        labels.add(distanceLabel);
+        for (TextView label : labels) {
+            if (label != null) {
+                label.setTextSize(12f * safeMultiplier);
+            }
+        }
+    }
+
+    private String formatSpeed(float speedMph) {
+        if (isMetricUnits()) {
+            float speedKmh = speedMph * 1.60934f;
+            return Math.round(speedKmh) + " km/h";
+        }
+        return Math.round(speedMph) + " mph";
+    }
+
+    private boolean isMetricUnits() {
+        Object value = settings.get("unitSystem");
+        return value != null && "metric".equalsIgnoreCase(value.toString());
+    }
+
+    private float parseSettingFloat(String key, float fallback) {
+        Object value = settings.get(key);
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Float.parseFloat(value.toString());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private boolean parseSettingBoolean(String key, boolean fallback) {
+        Object value = settings.get(key);
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return Boolean.parseBoolean(value.toString());
+    }
+
+    private int parseSettingColor(String key, int fallback) {
+        Object value = settings.get(key);
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     private int parseSettingInt(String key, int fallback) {

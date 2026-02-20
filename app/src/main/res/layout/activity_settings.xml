@@ -428,6 +428,48 @@
                             android:layout_weight="2"
                             android:text="Choose Color" />
                     </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Show Map Background" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_show_basemap"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Map Background Opacity (0-1)" />
+
+                        <EditText
+                            android:id="@+id/basemap_opacity"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:imeOptions="flagNoExtractUi"
+                            android:inputType="numberDecimal"
+                            android:singleLine="true"
+                            android:tooltipText="basemapOpacity" />
+                    </TableRow>
                 </TableLayout>
             </LinearLayout>
 

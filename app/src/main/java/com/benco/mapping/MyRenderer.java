@@ -97,6 +97,9 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private int fullscreenProgram;
     private FloatBuffer fullscreenVertexBuffer;
     private FloatBuffer fullscreenUvBuffer;
+    private int basemapTextureId;
+    private boolean showBasemap = false;
+    private float basemapAlpha = 0.5f;
 
     int parsedFillColor = Color.parseColor("#121314");
     float fillRed = Color.red(parsedFillColor)/255f;
@@ -408,6 +411,7 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         //GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        drawBasemap();
         drawGrid();
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         drawPathLines();
@@ -610,17 +614,17 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
 
             for (int i = 0; i < lineIndex; i++) {
-                drawFullscreenTexture(lineTextures[i]);
+                drawFullscreenTexture(lineTextures[i], 1.0f);
             }
-            drawFullscreenTexture(mainPathTexture);
+            drawFullscreenTexture(mainPathTexture, 1.0f);
             if (showSteeringLines && steeringLineTexture != 0) {
-                drawFullscreenTexture(steeringLineTexture);
+                drawFullscreenTexture(steeringLineTexture, 1.0f);
             }
             if (showABLines && guideLinesTexture != 0) {
-                drawFullscreenTexture(guideLinesTexture);
+                drawFullscreenTexture(guideLinesTexture, 1.0f);
             }
             if (showABLines && abLineTexture != 0) {
-                drawFullscreenTexture(abLineTexture);
+                drawFullscreenTexture(abLineTexture, 1.0f);
             }
         } else {
             for (StripLine line : listCopyLeft) {
@@ -644,16 +648,25 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         }
         GLES20.glDisableVertexAttribArray(positionHandle);
     }
-    private void drawFullscreenTexture(int textureId) {
+
+    private void drawBasemap() {
+        if (!showBasemap || basemapTextureId == 0) {
+            return;
+        }
+        drawFullscreenTexture(basemapTextureId, basemapAlpha);
+    }
+    private void drawFullscreenTexture(int textureId, float alpha) {
         GLES20.glUseProgram(fullscreenProgram);
 
         int positionHandle = glGetAttribLocation(fullscreenProgram, "a_Position");
         int texCoordHandle = glGetAttribLocation(fullscreenProgram, "a_TexCoord");
         int textureHandle = GLES20.glGetUniformLocation(fullscreenProgram, "u_Texture");
+        int alphaHandle = GLES20.glGetUniformLocation(fullscreenProgram, "u_Alpha");
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
         GLES20.glUniform1i(textureHandle, 0);
+        GLES20.glUniform1f(alphaHandle, alpha);
 
         fullscreenVertexBuffer.position(0);
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, fullscreenVertexBuffer);
@@ -786,6 +799,7 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
         GLES20.glUniform1i(textureHandle, 0);
+        GLES20.glUniform1f(alphaHandle, alpha);
 
         vertexBuffer.position(0);
         GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, vertexBuffer);
@@ -1049,6 +1063,38 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         return out;
     }
 
+    private int createBitmapTexture(Bitmap bitmap) {
+        int[] textures = new int[1];
+        GLES20.glGenTextures(1, textures, 0);
+        int textureId = textures[0];
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+        return textureId;
+    }
+
+    public void setBasemapBitmap(Bitmap bitmap) {
+        if (bitmap == null) {
+            showBasemap = false;
+            return;
+        }
+        if (basemapTextureId != 0) {
+            int[] textures = new int[]{basemapTextureId};
+            GLES20.glDeleteTextures(1, textures, 0);
+            basemapTextureId = 0;
+        }
+        basemapTextureId = createBitmapTexture(bitmap);
+    }
+
+    public void setBasemapDisplay(boolean show, float alpha) {
+        this.showBasemap = show;
+        this.basemapAlpha = Math.max(0.05f, Math.min(alpha, 1.0f));
+    }
+
     private int createSolidTexture(int color) {
         int size = 64;
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
@@ -1135,6 +1181,7 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
             GLES20.glUniform1i(textureHandle, 0);
+        GLES20.glUniform1f(alphaHandle, alpha);
 
             vertices.position(0);
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, vertices);

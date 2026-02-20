@@ -119,6 +119,10 @@ public class BaseActivity extends AppCompatActivity {
         settings.put("showSteeringLines", showSteeringLines);
         boolean showFieldBoundaries = sharedPreferences.getBoolean("showFieldBoundaries", true);
         settings.put("showFieldBoundaries", showFieldBoundaries);
+        boolean showBasemap = sharedPreferences.getBoolean("showBasemap", false);
+        settings.put("showBasemap", showBasemap);
+        String basemapOpacity = sharedPreferences.getString("basemapOpacity", "0.55");
+        settings.put("basemapOpacity", basemapOpacity);
 
         int gridColor = sharedPreferences.getInt("gridColor", Color.parseColor("#C0780000"));
         settings.put("gridColor", gridColor);

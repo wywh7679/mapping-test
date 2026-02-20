@@ -9,6 +9,11 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import android.graphics.BitmapFactory;
+import android.graphics.Bitmap;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -622,6 +627,12 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             renderer.setFieldBoundaryDisplay(parseSettingBoolean("showFieldBoundaries", true));
             renderer.setFieldBoundaryColor(parseSettingColor("fieldBoundaryColor", Color.YELLOW));
             renderer.setFieldBoundaryGeometry(buildFieldBoundaryGeometry(applications));
+            boolean showBasemap = parseSettingBoolean("showBasemap", false);
+            float basemapOpacity = parseSettingFloat("basemapOpacity", 0.55f);
+            renderer.setBasemapDisplay(showBasemap, basemapOpacity);
+            if (showBasemap) {
+                loadOpenFreeMapBackground(applications);
+            }
         });
         AppVM.getAllApplicationsByLid(lid).observe(this, applications -> {
             for (Applications application : applications) {
@@ -845,6 +856,46 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         int y = (int) Math.round(dLat);
         int x = (int) Math.round(dLng);
         return new float[]{x, y};
+    }
+
+    private void loadOpenFreeMapBackground(List<ApplicationsData> applications) {
+        if (applications == null || applications.isEmpty()) {
+            return;
+        }
+        ApplicationsData center = applications.get(applications.size() - 1);
+        if (center.lat == null || center.lng == null) {
+            return;
+        }
+        new Thread(() -> {
+            try {
+                int zoom = 14;
+                int tileX = lonToTileX(center.lng, zoom);
+                int tileY = latToTileY(center.lat, zoom);
+                String tileUrl = "https://tiles.openfreemap.org/styles/bright/" + zoom + "/" + tileX + "/" + tileY + ".png";
+                HttpURLConnection connection = (HttpURLConnection) new URL(tileUrl).openConnection();
+                connection.setConnectTimeout(7000);
+                connection.setReadTimeout(7000);
+                connection.connect();
+                try (InputStream stream = connection.getInputStream()) {
+                    Bitmap bitmap = BitmapFactory.decodeStream(stream);
+                    if (bitmap != null) {
+                        runOnUiThread(() -> renderer.setBasemapBitmap(bitmap));
+                    }
+                }
+                connection.disconnect();
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load OpenFreeMap tile", e);
+            }
+        }).start();
+    }
+
+    private int lonToTileX(double lon, int zoom) {
+        return (int) Math.floor((lon + 180.0) / 360.0 * (1 << zoom));
+    }
+
+    private int latToTileY(double lat, int zoom) {
+        double latRad = Math.toRadians(lat);
+        return (int) Math.floor((1.0 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2.0 * (1 << zoom));
     }
 
     private int parseSettingInt(String key, int fallback) {

@@ -1,37 +1,63 @@
 package com.benco.mapping;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.benco.mapping.data.Applications;
+import com.benco.mapping.data.ApplicationsData;
 import com.benco.mapping.data.ApplicationsListAdapter;
 import com.benco.mapping.data.Locations;
+import com.benco.mapping.domain.ApplicationsDataViewModel;
 import com.benco.mapping.domain.ApplicationsViewModel;
 import com.benco.mapping.domain.LocationsViewModel;
 import com.google.gson.Gson;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.zip.ZipOutputStream;
 
 public class ApplicationsActivity extends BaseActivity {
     private RecyclerView recyclerView;
     private Button addNewApplication;
     private Button backButton;
     private ApplicationsViewModel applicationsViewDModel;
+    private ApplicationsDataViewModel applicationsDataViewModel;
+    private Applications pendingExportApplication;
+    private ActivityResultLauncher<Intent> exportShapefileLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_applications);
+
+        exportShapefileLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() != RESULT_OK || result.getData() == null) {
+                        return;
+                    }
+                    Uri uri = result.getData().getData();
+                    if (uri == null || pendingExportApplication == null) {
+                        return;
+                    }
+                    exportApplicationToShapefile(uri, pendingExportApplication);
+                    pendingExportApplication = null;
+                });
 
         lid = getIntent().getIntExtra("lid", -1);
 
@@ -49,13 +75,15 @@ public class ApplicationsActivity extends BaseActivity {
         });
 
         applicationsViewDModel = ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()).create(ApplicationsViewModel.class);
+        applicationsDataViewModel = ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()).create(ApplicationsDataViewModel.class);
 
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         applicationsViewDModel.getAllApplicationsByLid(lid).observe(this, applications -> {
             if (applications != null && !applications.isEmpty()) {
                 ApplicationsListAdapter adapter = new ApplicationsListAdapter((ArrayList<Applications>) applications,
-                        this::showDeleteApplicationConfirmation);
+                        this::showDeleteApplicationConfirmation,
+                        this::openExportFilePicker);
                 recyclerView.setAdapter(adapter);
             } else {
                 recyclerView.setAdapter(null);
@@ -100,5 +128,38 @@ public class ApplicationsActivity extends BaseActivity {
                 .setPositiveButton("Delete", (dialog, which) -> applicationsViewDModel.deleteApplicationById(application.aid))
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void openExportFilePicker(Applications application) {
+        pendingExportApplication = application;
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/zip");
+        intent.putExtra(Intent.EXTRA_TITLE, "application_" + application.aid + ".zip");
+        exportShapefileLauncher.launch(intent);
+    }
+
+    private void exportApplicationToShapefile(Uri destinationUri, Applications application) {
+        new Thread(() -> {
+            List<ApplicationsData> pathPoints = applicationsDataViewModel.getAllApplicationsListVm(application.aid);
+            if (pathPoints == null || pathPoints.size() < 2) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        "Not enough GPS data to export shapefile.", Toast.LENGTH_LONG).show());
+                return;
+            }
+            try (OutputStream outputStream = getContentResolver().openOutputStream(destinationUri);
+                 ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
+                if (outputStream == null) {
+                    throw new IOException("Unable to open export destination.");
+                }
+                String baseName = "application_" + application.aid;
+                ShapefileExporter.exportPolylineZip(zipOutputStream, baseName, application.aid, pathPoints);
+                runOnUiThread(() -> Toast.makeText(this,
+                        "Exported shapefile ZIP: " + baseName + ".zip", Toast.LENGTH_LONG).show());
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }).start();
     }
 }

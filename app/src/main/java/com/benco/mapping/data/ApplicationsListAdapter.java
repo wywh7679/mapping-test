@@ -21,14 +21,22 @@ import java.util.Date;
 public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsListAdapter.ApplicationsViewHolder> {
     ArrayList<Applications> applicationsArrayList;
     private final OnApplicationDeleteListener onApplicationDeleteListener;
+    private final OnApplicationExportListener onApplicationExportListener;
 
     public interface OnApplicationDeleteListener {
         void onDeleteRequested(Applications application);
     }
 
-    public ApplicationsListAdapter(ArrayList<Applications> applications, OnApplicationDeleteListener onApplicationDeleteListener) {
+    public interface OnApplicationExportListener {
+        void onExportRequested(Applications application);
+    }
+
+    public ApplicationsListAdapter(ArrayList<Applications> applications,
+                                   OnApplicationDeleteListener onApplicationDeleteListener,
+                                   OnApplicationExportListener onApplicationExportListener) {
         this.applicationsArrayList = applications;
         this.onApplicationDeleteListener = onApplicationDeleteListener;
+        this.onApplicationExportListener = onApplicationExportListener;
     }
 
     @NonNull
@@ -61,6 +69,11 @@ public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsLi
                 onApplicationDeleteListener.onDeleteRequested(applicationsArrayList.get(holder.getAdapterPosition()));
             }
         });
+        holder.listApplicationExportButton.setOnClickListener(v -> {
+            if (onApplicationExportListener != null) {
+                onApplicationExportListener.onExportRequested(applicationsArrayList.get(holder.getAdapterPosition()));
+            }
+        });
     }
 
     @Override
@@ -73,6 +86,7 @@ public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsLi
         Button listApplicationEditButton;
         Button listApplicationEditButton3d;
         Button listApplicationDeleteButton;
+        Button listApplicationExportButton;
 
         public ApplicationsViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -84,6 +98,7 @@ public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsLi
             listApplicationEditButton = itemView.findViewById(R.id.listApplicationEditButton);
             listApplicationEditButton3d = itemView.findViewById(R.id.listApplicationEditButton3d);
             listApplicationDeleteButton = itemView.findViewById(R.id.listApplicationDeleteButton);
+            listApplicationExportButton = itemView.findViewById(R.id.listApplicationExportButton);
         }
     }
 }

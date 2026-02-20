@@ -629,7 +629,8 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             renderer.setFieldBoundaryGeometry(buildFieldBoundaryGeometry(applications));
             boolean showBasemap = parseSettingBoolean("showBasemap", false);
             float basemapOpacity = parseSettingFloat("basemapOpacity", 0.55f);
-            renderer.setBasemapDisplay(showBasemap, basemapOpacity);
+            glSurfaceView.queueEvent(() -> renderer.setBasemapDisplay(showBasemap, basemapOpacity));
+            glSurfaceView.requestRender();
             if (showBasemap) {
                 loadOpenFreeMapBackground(applications);
             }
@@ -889,7 +890,8 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
 
                 if (bitmap != null) {
                     Bitmap finalBitmap = bitmap;
-                    runOnUiThread(() -> renderer.setBasemapBitmap(finalBitmap));
+                    glSurfaceView.queueEvent(() -> renderer.setBasemapBitmap(finalBitmap));
+                    glSurfaceView.requestRender();
                 } else {
                     Log.e(TAG, "Failed to load basemap tile from all providers.");
                 }

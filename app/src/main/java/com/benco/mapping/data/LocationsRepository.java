@@ -26,6 +26,14 @@ public class LocationsRepository {
         return listLocations;
     }
 
+    public void updateLocation(Locations location) {
+        LocationsRoomDatabase.databaseWriteExecutor.execute(() -> locationsDao.update(location));
+    }
+
+    public Locations getLocationByIdSync(int lid) {
+        return locationsDao.getLocationByIdSync(lid);
+    }
+
     public void deleteLocationById(int lid) {
         LocationsRoomDatabase.databaseWriteExecutor.execute(() -> {
             locationsRoomDatabase.applicationsDataDao().deleteByLid(lid);

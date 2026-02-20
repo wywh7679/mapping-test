@@ -389,6 +389,45 @@
                             android:layout_weight="2"
                             android:text="Choose Color" />
                     </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Show Field Boundaries" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_show_field_boundaries"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Field Boundary Color" />
+
+                        <Button
+                            android:id="@+id/field_boundary_color_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Choose Color" />
+                    </TableRow>
                 </TableLayout>
             </LinearLayout>
 

@@ -159,11 +159,13 @@ public class SettingsActivity extends BaseActivity {
         bindToggle(R.id.switch_show_background, "showSolidBackground", true);
         bindToggle(R.id.switch_show_ab_lines, "showABLines", true);
         bindToggle(R.id.switch_show_steering_lines, "showSteeringLines", true);
+        bindToggle(R.id.switch_show_field_boundaries, "showFieldBoundaries", true);
 
         bindColorPickerButton(R.id.grid_color_button, "gridColor", false);
         bindColorPickerButton(R.id.background_color_button, "backgroundColor", false);
         bindColorPickerButton(R.id.ab_line_color_button, "abLineColor", false);
         bindColorPickerButton(R.id.steering_line_color_button, "steeringLineColor", false);
+        bindColorPickerButton(R.id.field_boundary_color_button, "fieldBoundaryColor", false);
     }
 
     private void bindThemeSpinner() {

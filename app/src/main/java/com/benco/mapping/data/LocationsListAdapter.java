@@ -18,14 +18,20 @@ import java.util.ArrayList;
 public class LocationsListAdapter extends RecyclerView.Adapter<LocationsListAdapter.LocationsViewHolder> {
     ArrayList<Locations> locationsArrayList;
     private final OnLocationDeleteListener onLocationDeleteListener;
+    private final OnLocationBoundaryListener onLocationBoundaryListener;
 
     public interface OnLocationDeleteListener {
         void onDeleteRequested(Locations location);
     }
 
-    public LocationsListAdapter(ArrayList<Locations> locations, OnLocationDeleteListener onLocationDeleteListener) {
+    public interface OnLocationBoundaryListener {
+        void onBoundaryUploadRequested(Locations location);
+    }
+
+    public LocationsListAdapter(ArrayList<Locations> locations, OnLocationDeleteListener onLocationDeleteListener, OnLocationBoundaryListener onLocationBoundaryListener) {
         this.locationsArrayList = locations;
         this.onLocationDeleteListener = onLocationDeleteListener;
+        this.onLocationBoundaryListener = onLocationBoundaryListener;
     }
 
     @NonNull
@@ -54,6 +60,11 @@ public class LocationsListAdapter extends RecyclerView.Adapter<LocationsListAdap
                 onLocationDeleteListener.onDeleteRequested(locationsArrayList.get(holder.getAdapterPosition()));
             }
         });
+        holder.listLocationsBoundaryButton.setOnClickListener(v -> {
+            if (onLocationBoundaryListener != null) {
+                onLocationBoundaryListener.onBoundaryUploadRequested(locationsArrayList.get(holder.getAdapterPosition()));
+            }
+        });
     }
 
     @Override
@@ -66,6 +77,7 @@ public class LocationsListAdapter extends RecyclerView.Adapter<LocationsListAdap
         Button listLocationsViewButton;
         Button listLocationsEditButton;
         Button listLocationsDeleteButton;
+        Button listLocationsBoundaryButton;
 
         public LocationsViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -77,6 +89,7 @@ public class LocationsListAdapter extends RecyclerView.Adapter<LocationsListAdap
             listLocationsViewButton = itemView.findViewById(R.id.listLocationsViewButton);
             listLocationsEditButton = itemView.findViewById(R.id.listLocationsEditButton);
             listLocationsDeleteButton = itemView.findViewById(R.id.listLocationsDeleteButton);
+            listLocationsBoundaryButton = itemView.findViewById(R.id.listLocationsBoundaryButton);
         }
     }
 }

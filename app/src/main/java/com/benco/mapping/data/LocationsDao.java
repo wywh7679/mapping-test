@@ -25,4 +25,7 @@ public interface LocationsDao {
 
     @Query("DELETE from locations WHERE lid=:lid")
     void deleteLocationById(int lid);
+
+    @Query("SELECT * from locations WHERE lid=:lid LIMIT 1")
+    Locations getLocationByIdSync(int lid);
 }

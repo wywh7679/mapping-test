@@ -117,6 +117,8 @@ public class BaseActivity extends AppCompatActivity {
         settings.put("showABLines", showABLines);
         boolean showSteeringLines = sharedPreferences.getBoolean("showSteeringLines", true);
         settings.put("showSteeringLines", showSteeringLines);
+        boolean showFieldBoundaries = sharedPreferences.getBoolean("showFieldBoundaries", true);
+        settings.put("showFieldBoundaries", showFieldBoundaries);
 
         int gridColor = sharedPreferences.getInt("gridColor", Color.parseColor("#C0780000"));
         settings.put("gridColor", gridColor);
@@ -126,6 +128,8 @@ public class BaseActivity extends AppCompatActivity {
         settings.put("abLineColor", abLineColor);
         int steeringLineColor = sharedPreferences.getInt("steeringLineColor", Color.parseColor("#FF0000FF"));
         settings.put("steeringLineColor", steeringLineColor);
+        int fieldBoundaryColor = sharedPreferences.getInt("fieldBoundaryColor", Color.parseColor("#FFFFFF00"));
+        settings.put("fieldBoundaryColor", fieldBoundaryColor);
 
         int mainPathColor = sharedPreferences.getInt("mainPathColor", R.color.green);
         //Log.d(TAG, "mainPathColor: "+mainPathColor);

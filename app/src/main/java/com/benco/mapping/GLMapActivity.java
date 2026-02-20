@@ -56,6 +56,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.benco.mapping.data.Applications;
 import com.benco.mapping.data.ApplicationsData;
+import com.benco.mapping.data.Locations;
 import com.benco.mapping.data.LocationsDao;
 import com.benco.mapping.data.LocationsRoomDatabase;
 import com.benco.mapping.domain.ApplicationsDataViewModel;
@@ -618,6 +619,9 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             renderer.setGridBackgroundColor(parseSettingColor("backgroundColor", Color.parseColor("#C71F1F1F")));
             renderer.setAbLineColor(parseSettingColor("abLineColor", Color.GREEN));
             renderer.setSteeringLineColor(parseSettingColor("steeringLineColor", Color.BLUE));
+            renderer.setFieldBoundaryDisplay(parseSettingBoolean("showFieldBoundaries", true));
+            renderer.setFieldBoundaryColor(parseSettingColor("fieldBoundaryColor", Color.YELLOW));
+            renderer.setFieldBoundaryGeometry(buildFieldBoundaryGeometry(applications));
         });
         AppVM.getAllApplicationsByLid(lid).observe(this, applications -> {
             for (Applications application : applications) {
@@ -761,6 +765,86 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         } catch (NumberFormatException e) {
             return fallback;
         }
+    }
+
+    private List<float[]> buildFieldBoundaryGeometry(List<ApplicationsData> applications) {
+        if (applications == null || applications.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            Locations location = locationsDao.getLocationByIdSync(lid);
+            if (location == null || location.config == null || location.config.isEmpty()) {
+                return new ArrayList<>();
+            }
+            JSONObject config = new JSONObject(location.config);
+            if (!config.has("boundaryFilePath")) {
+                return new ArrayList<>();
+            }
+            String boundaryFilePath = config.getString("boundaryFilePath");
+            java.io.File shpFile = new java.io.File(boundaryFilePath);
+            if (!shpFile.exists()) {
+                return new ArrayList<>();
+            }
+
+            ApplicationsData last = applications.get(applications.size() - 1);
+            double centerLat = last.lat;
+            double centerLng = last.lng;
+
+            float minX = Float.MAX_VALUE;
+            float minY = Float.MAX_VALUE;
+            for (ApplicationsData appData : applications) {
+                if (appData.speed == 0 || appData.lat == 0 || appData.lng == 0) {
+                    continue;
+                }
+                float[] xy = toXY(centerLat, centerLng, appData.lat, appData.lng, 0.0254f);
+                minX = Math.min(minX, xy[0]);
+                minY = Math.min(minY, xy[1]);
+            }
+            float xOffset = minX < 0 ? Math.abs(minX) : -minX;
+            float yOffset = minY < 0 ? Math.abs(minY) : -minY;
+
+            java.io.FileInputStream fis = new java.io.FileInputStream(shpFile);
+            List<List<double[]>> parts = ShapefileBoundaryReader.readBoundaryParts(fis, false);
+            fis.close();
+
+            List<float[]> strips = new ArrayList<>();
+            for (List<double[]> part : parts) {
+                if (part.size() < 2) {
+                    continue;
+                }
+                boolean closed = Math.abs(part.get(0)[0] - part.get(part.size()-1)[0]) < 1e-10 &&
+                        Math.abs(part.get(0)[1] - part.get(part.size()-1)[1]) < 1e-10;
+                int extra = closed ? 0 : 1;
+                float[] strip = new float[(part.size() + extra) * 3];
+                int idx = 0;
+                for (double[] lngLat : part) {
+                    float[] xy = toXY(centerLat, centerLng, lngLat[1], lngLat[0], 0.0254f);
+                    strip[idx++] = xy[0] + xOffset;
+                    strip[idx++] = 0f;
+                    strip[idx++] = xy[1] + yOffset;
+                }
+                if (!closed) {
+                    float[] xy = toXY(centerLat, centerLng, part.get(0)[1], part.get(0)[0], 0.0254f);
+                    strip[idx++] = xy[0] + xOffset;
+                    strip[idx++] = 0f;
+                    strip[idx] = xy[1] + yOffset;
+                }
+                strips.add(strip);
+            }
+            return strips;
+        } catch (Exception e) {
+            Log.e(TAG, "Boundary load failed", e);
+            return new ArrayList<>();
+        }
+    }
+
+    private float[] toXY(double centerLatitude, double centerLongitude, double latitude, double longitude, double metersPerPixel) {
+        double rto = 1 / metersPerPixel;
+        double dLat = ((centerLatitude - latitude) / 0.00001) * rto;
+        double dLng = -1 * ((centerLongitude - longitude) / 0.00001) * rto;
+        int y = (int) Math.round(dLat);
+        int x = (int) Math.round(dLng);
+        return new float[]{x, y};
     }
 
     private int parseSettingInt(String key, int fallback) {

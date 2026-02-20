@@ -54,6 +54,8 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private final List<Integer> guideLineCounts = new ArrayList<>();
     private final List<StripLine> leftLines = new ArrayList<>();
     private final List<StripLine> rightLines = new ArrayList<>();
+    private final List<FloatBuffer> fieldBoundaryBuffers = new ArrayList<>();
+    private final List<Integer> fieldBoundaryCounts = new ArrayList<>();
     private int mainPathCount;
     private int leftPathCount;
     private int rightPathCount;
@@ -65,10 +67,12 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private final float[] abLineColor = new float[]{0f, 1f, 0f, 1f};
     private final float[] guideLineColor = new float[]{1f, 1f, 1f, 1f};
     private final float[] steeringLineColor = new float[]{0f, 0f, 1f, 1f};
+    private final float[] fieldBoundaryColor = new float[]{1f, 1f, 0f, 1f};
     private boolean showGrid = true;
     private boolean showSolidBackground = true;
     private boolean showABLines = true;
     private boolean showSteeringLines = true;
+    private boolean showFieldBoundaries = true;
     private float mainPathHalfWidth = 1.0f;
     private int texturedProgram;
     private int mainLineTextureId;
@@ -628,6 +632,16 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 // line.drawTriangleStrip(texturedProgram, projectionMatrix, viewMatrix);
             }
         }
+
+        if (showFieldBoundaries && !fieldBoundaryBuffers.isEmpty()) {
+            for (int i = 0; i < fieldBoundaryBuffers.size(); i++) {
+                FloatBuffer buffer = fieldBoundaryBuffers.get(i);
+                int count = fieldBoundaryCounts.get(i);
+                if (buffer != null && count > 1) {
+                    drawLineStrip(buffer, count, positionHandle, colorHandle, fieldBoundaryColor);
+                }
+            }
+        }
         GLES20.glDisableVertexAttribArray(positionHandle);
     }
     private void drawFullscreenTexture(int textureId) {
@@ -880,6 +894,29 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
     public void setSteeringLineColor(int colorInt) {
         setColor(steeringLineColor, colorInt);
+    }
+
+    public void setFieldBoundaryDisplay(boolean showFieldBoundaries) {
+        this.showFieldBoundaries = showFieldBoundaries;
+    }
+
+    public void setFieldBoundaryColor(int colorInt) {
+        setColor(fieldBoundaryColor, colorInt);
+    }
+
+    public void setFieldBoundaryGeometry(List<float[]> boundaryStrips) {
+        fieldBoundaryBuffers.clear();
+        fieldBoundaryCounts.clear();
+        if (boundaryStrips == null) {
+            return;
+        }
+        for (float[] strip : boundaryStrips) {
+            FloatBuffer buffer = buildFloatBuffer(strip);
+            if (buffer != null && strip.length >= COORDS_PER_VERTEX * 2) {
+                fieldBoundaryBuffers.add(buffer);
+                fieldBoundaryCounts.add(strip.length / COORDS_PER_VERTEX);
+            }
+        }
     }
 
     private void setColorFromIntWithAlpha(int colorInt, boolean forGrid, boolean forBackground) {

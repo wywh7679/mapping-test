@@ -799,7 +799,6 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
         GLES20.glUniform1i(textureHandle, 0);
-        GLES20.glUniform1f(alphaHandle, alpha);
 
         vertexBuffer.position(0);
         GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, vertexBuffer);
@@ -1181,7 +1180,6 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
             GLES20.glUniform1i(textureHandle, 0);
-        GLES20.glUniform1f(alphaHandle, alpha);
 
             vertices.position(0);
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, vertices);

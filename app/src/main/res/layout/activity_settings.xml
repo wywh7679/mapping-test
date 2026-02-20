@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:scrollbars="vertical">
+    <RelativeLayout
+        android:id="@+id/relative_top"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="#7C991B1E"
+        android:clickable="true"
+        android:clipChildren="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+
+        <ImageView
+            android:id="@+id/homeBtn"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="4dp"
+            android:src="@android:drawable/ic_menu_compass"
+            app:layout_constraintLeft_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/relative_top">
+
+        <RelativeLayout
+            android:id="@+id/settings_home"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#7a7777"
+            android:clickable="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:scrollbars="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TableLayout
+                android:id="@+id/settings_table"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content">
+
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="15dp"
+                    android:weightSum="6">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="6"
+                        android:text="Vehicle Track"
+                        android:textSize="28sp" />
+                </TableRow>
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="15dp"
+                    android:weightSum="6">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:text="Color" />
+                    <Button
+                        android:id="@+id/color_picker_button"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:background="@color/green"
+                        android:clickable="true"
+                        android:text="Choose Color" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="15dp"
+                    android:weightSum="6">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:text="Highlight Color" />
+
+                    <Button
+                        android:id="@+id/color_picker_button2"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:background="@color/red"
+                        android:clickable="true"
+                        android:text="Choose Color" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="15dp"
+                    android:weightSum="6">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:text="Vehicle Width In Inches" />
+
+                    <EditText
+                        android:id="@+id/thickPathStroke"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:imeOptions="flagNoExtractUi"
+                        android:inputType="number"
+                        android:singleLine="true"
+                        android:tooltipText="thickPathStroke" />
+                </TableRow>
+            </TableLayout>
+            <TableLayout
+                android:id="@+id/table_sprayer"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@id/settings_table"
+                android:scrollbars="vertical">
+
+            <TableRow
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="15dp"
+                android:weightSum="6">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="6"
+                    android:text="Sprayer Configuration"
+                    android:textSize="28sp" />
+
+
+            </TableRow>
+            </TableLayout>
+            <TableLayout
+                android:id="@+id/settings_table_sprayer"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@id/table_sprayer"
+                android:scrollbars="vertical">
+
+
+
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="15dp"
+                    android:weightSum="6">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:text="How many sections do you have?" />
+
+                    <EditText
+                        android:id="@+id/totalNumberSections"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:imeOptions="flagNoExtractUi"
+                        android:inputType="number"
+                        android:singleLine="true"
+                        android:tooltipText="totalNumberSections" />
+                </TableRow>
+
+            </TableLayout>
+            <TableLayout
+                android:id="@+id/settings_table_sprayer_sections"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@id/settings_table_sprayer"
+                android:scrollbars="vertical">
+
+            </TableLayout>
+            <TableLayout
+                android:id="@+id/settings_buttons"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/settings_table_sprayer_sections"
+                android:scrollbars="vertical">
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="15dp"
+                    android:weightSum="6">
+                    <Button
+                        android:id="@+id/back_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="3"
+                        android:text="Back"
+                        android:visibility="gone" />
+
+                    <Button
+                        android:id="@+id/next_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="right"
+                        android:layout_weight="3"
+                        android:text="Next"
+                        android:visibility="visible" />
+
+                    <Button
+                        android:id="@+id/done_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="3"
+                        android:text="Done"
+                        android:visibility="gone" />
+                </TableRow>
+
+            </TableLayout>
+
+            <ImageView
+                android:id="@+id/imageView2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/settings_buttons"
+                android:layout_marginLeft="-35dp"
+                android:layout_marginTop="15dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/planter_section_graph" />
+            <TableLayout
+                android:id="@+id/settings_table_sprayer_preview_table"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@id/imageView2"
+                android:scrollbars="vertical">
+                <TableRow
+                    android:id="@+id/settings_table_sprayer_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:minHeight="40dp"
+                    android:weightSum="24">
+                </TableRow>
+            </TableLayout>
+
+            <Button
+                android:id="@+id/backButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/settings_table_sprayer_preview_table"
+                android:layout_marginTop="10dp"
+                android:text="Back"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintLeft_toLeftOf="parent" />
+        </RelativeLayout>
+
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

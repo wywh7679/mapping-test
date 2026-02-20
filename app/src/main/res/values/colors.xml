@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="gray">#FF333333</color>
+    <color name="lightGray">#FFCCCCCC</color>
+    <color name="green">#FF008000</color>
+    <color name="red">#FFFF0000</color>
+    <color name="blue">#FF0000FF</color>
+    <color name="yellow">#FFFFFF00</color>
+    <color name="orange">#FFFFBF00</color>
+    <color name="lime">#FF00FF00</color>
+    <color name="aqua">#FF00FFFF</color>
+    <color name="purple">#FFFF00FF</color>
+
+    <color name="blackA">#55000000</color>
+    <color name="whiteA">#55FFFFFF</color>
+    <color name="grayA">#55333333</color>
+    <color name="lightGrayA">#55CCCCCC</color>
+    <color name="greenA">#55008000</color>
+    <color name="redA">#55FF0000</color>
+    <color name="blueA">#550000FF</color>
+    <color name="yellowA">#55FFFF00</color>
+    <color name="orangeA">#55FFBF00</color>
+    <color name="limeA">#5500FF00</color>
+    <color name="aquaA">#5500FFFF</color>
+    <color name="purpleA">#55FF00FF</color>
+
+
+
+
+    <color name="transparent">#00000000</color>
+"
+    <color name="BencoRed">#991B1E</color>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="colorBackground">#ffffff</color>
+    <color name="colorDarkBackground">#444444</color>
+
+    <color name="radiobutton_stroke">#dbdbdb</color>
+    <color name="radiobutton_checked">#ff0000</color>
+    <color name="radiobutton_unchecked">#dcd4d4d7</color>
+    <color name="radiobutton_disabled">#f5f5f7</color>
+    <color name="button_pressed">#000000</color>
+    <color name="snackbarbackground">#B3939393</color>
+    <color name="magenta">#9b00ff</color>
+    <color name="tabBackgroundDark">#777</color>
+    <color name="tabBackgroundLight">#fff</color>
+    <color name="tabTextDark">#f00</color>
+    <color name="tabTextLight">#fff</color>
+</resources>

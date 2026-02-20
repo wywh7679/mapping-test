@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.motion.widget.MotionLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_alignParentRight="true"
+    app:layoutDescription="@xml/activity_glmapactivity_scene">
+
+    <FrameLayout
+        android:id="@+id/glSurfaceContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.benco.mapping.MyGLSurfaceView
+            android:id="@+id/glSurface"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+
+    </FrameLayout>
+
+    <ImageView
+        android:id="@+id/compassImage"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_margin="15dp"
+        android:scaleType="fitCenter"
+        android:rotation="0"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/relative_top"
+        android:src="@drawable/compass_svgrepo_com" />
+    <Button
+        android:id="@+id/zoomInButton"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="7dp"
+        android:text="Zoom\nIn"
+        android:textSize="12dp"
+        app:layout_constraintBottom_toTopOf="@id/zoomSeekBar"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+    <SeekBar
+        android:id="@+id/zoomSeekBar"
+        android:layout_width="125dp"
+        android:layout_height="100dp"
+        android:layout_margin="7dp"
+        android:max="96000"
+        android:min="0"
+        android:progress="0"
+        android:rotation="90"
+        android:translationX="-33dp"
+        app:layout_constraintBottom_toTopOf="@id/zoomOutButton"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+
+    <Button
+        android:id="@+id/zoomOutButton"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="7dp"
+        android:text="Zoom\nOut"
+        android:textSize="11dp"
+        app:layout_constraintBottom_toTopOf="@+id/resetButton"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+    <Button
+        android:id="@+id/resetButton"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="7dp"
+        android:text="RESET"
+        android:textSize="11dp"
+        app:layout_constraintBottom_toTopOf="@id/relative_bottom"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+
+    <RelativeLayout
+        android:id="@+id/relative_top"
+        android:layout_width="wrap_content"
+        android:layout_height="44dp"
+        android:background="#7C991B1E"
+        android:clickable="true"
+        android:clipChildren="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/gpsIndicator"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentStart="false"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="false"
+            android:layout_marginTop="4dp"
+            android:src="@android:drawable/ic_menu_mylocation"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/toggleGPSCaptureImg"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="4dp"
+            android:layout_toRightOf="@+id/gpsIndicator"
+            android:src="@android:drawable/ic_media_pause"
+            android:text="Capture"
+            android:tintMode="src_atop"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/white" />
+
+        <RelativeLayout
+            android:id="@+id/gridSizeLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="31dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_toRightOf="@id/toggleGPSCaptureImg"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:text="GRID SIZE"
+                android:textAlignment="center"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/gridSizeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginTop="4dp"
+                android:text="10ft"
+                android:textAlignment="center"
+                android:textSize="12sp" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/speedLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="31dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_toRightOf="@id/gridSizeLayout"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:text="MPH"
+                android:textAlignment="center"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/speedLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginTop="4dp"
+                android:text="@string/intialSpeed"
+                android:textAlignment="center"
+                android:textSize="12sp" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/headingLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="31dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_toRightOf="@id/speedLayout"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:text="HEADING"
+                android:textAlignment="center"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/headingLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginTop="4dp"
+                android:text="0"
+                android:textAlignment="center"
+                android:textSize="12sp" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/distanceLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="31dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_toRightOf="@id/headingLayout"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:text="DISTANCE"
+                android:textAlignment="center"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/distanceLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginTop="4dp"
+                android:text="0"
+                android:textAlignment="center"
+                android:textSize="12sp" />
+        </RelativeLayout>
+
+
+        <ImageView
+            android:id="@+id/homeBtn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentStart="false"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="false"
+            android:layout_marginTop="4dp"
+            android:layout_marginRight="10dp"
+            android:layout_toLeftOf="@id/settingsBtn"
+            android:clickable="true"
+            android:src="@android:drawable/ic_menu_revert"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/settingsBtn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentStart="false"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginTop="4dp"
+            android:clickable="true"
+            android:src="@android:drawable/ic_menu_preferences"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/gpsIndicatorOrig"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_toLeftOf="@id/toggleGPSCapture"
+            android:backgroundTint="@color/white"
+            android:text="@string/gps"
+            android:visibility="gone"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <EditText
+            android:id="@+id/application_id"
+            android:layout_width="47dp"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/gpsIndicator"
+            android:layout_alignParentLeft="false"
+            android:layout_alignParentTop="false"
+            android:layout_alignParentBottom="false"
+            android:layout_marginLeft="4dp"
+            android:layout_marginTop="8dp"
+            android:inputType="number"
+            android:text=""
+            android:textAlignment="center"
+            android:textSize="20sp"
+            android:visibility="gone" />
+
+        <Spinner
+            android:id="@+id/applicationList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/speedLayout"
+            android:layout_toRightOf="@id/application_id"
+            android:visibility="gone" />
+
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/toggleGPSCapture"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_toRightOf="@id/applicationList"
+            android:text="Capture"
+            android:visibility="gone"
+            app:layout_constraintLeft_toRightOf="@+id/application_id"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/liveLatLngView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#9C27B0"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/gpsIndicator"
+            tools:listitem="@layout/recyclerview_lat_lng_update_list"
+            tools:visibility="gone" />
+
+        <Button
+            android:id="@+id/loadButton"
+            android:layout_width="142dp"
+            android:layout_height="35dp"
+            android:layout_below="@id/gpsIndicator"
+            android:layout_alignParentTop="false"
+            android:layout_alignParentBottom="false"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="1dp"
+            android:layout_toRightOf="@id/application_id"
+            android:backgroundTint="@color/green"
+            android:text="LOAD"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/resetButtonOrig"
+            android:layout_width="142dp"
+            android:layout_height="35dp"
+            android:layout_below="@id/gpsIndicator"
+            android:layout_alignParentTop="false"
+            android:layout_alignParentBottom="false"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="1dp"
+            android:layout_toRightOf="@id/loadButton"
+            android:backgroundTint="@color/green"
+            android:text="RESET"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+    </RelativeLayout>
+    <RelativeLayout
+        android:id="@+id/relative_ab_container"
+        android:layout_width="80dp"
+        android:layout_height="200dp"
+        android:background="#7C991B1E"
+        android:clickable="true"
+        android:clipChildren="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/relative_bottom">
+
+        <Button
+            android:id="@+id/abLineDrawerHandle"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginLeft="7dp"
+            android:layout_marginRight="7dp"
+            android:layout_alignParentTop="true"
+            android:background="@drawable/drag_handle"
+            android:textSize="12dp" />
+        <Button
+            android:id="@+id/aLineButton"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/abLineDrawerHandle"
+            android:layout_alignParentRight="true"
+            android:layout_margin="7dp"
+            android:text="A\nPoint"
+            android:textSize="11dp" />
+
+        <Button
+            android:id="@+id/bLineButton"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/aLineButton"
+            android:layout_alignParentRight="true"
+            android:layout_margin="7dp"
+            android:text="B\nPoint"
+            android:textSize="12dp" />
+
+        <Button
+            android:id="@+id/abLinePlusButton"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_below="@id/bLineButton"
+            android:layout_alignParentLeft="true"
+            android:layout_margin="7dp"
+            android:background="@drawable/left_arrow"
+            android:text="Move\nLeft"
+            android:textColor="@color/transparent"
+            android:textSize="12dp" />
+
+        <Button
+            android:id="@+id/abLineMinusButton"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_below="@id/bLineButton"
+            android:layout_alignParentRight="true"
+            android:layout_margin="7dp"
+            android:background="@drawable/left_arrow"
+            android:rotation="180"
+            android:text="Move\nRight"
+            android:textColor="@color/transparent"
+            android:textSize="12dp" />
+
+
+        <Button
+            android:id="@+id/abLineRotatePlusButton"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_below="@id/abLinePlusButton"
+            android:layout_alignParentLeft="true"
+            android:layout_margin="7dp"
+            android:background="@drawable/rotate_left"
+            android:text="Rotate\nLeft"
+            android:textColor="@color/transparent"
+            android:textSize="12dp" />
+
+        <Button
+            android:id="@+id/abLineRotateMinusButton"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_below="@id/abLinePlusButton"
+            android:layout_alignParentRight="true"
+            android:layout_margin="7dp"
+            android:background="@drawable/rotate_right"
+            android:text="Rotate\nRight"
+            android:textColor="@color/transparent"
+            android:textSize="12dp" />
+    </RelativeLayout>
+    <RelativeLayout
+        android:id="@+id/relative_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#7C991B1E"
+        android:clickable="true"
+        android:clipChildren="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.flexbox.FlexboxLayout
+            android:id="@+id/flex_bottom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:alignItems="flex_start"
+            app:flexWrap="wrap"
+            app:justifyContent="flex_start">
+
+            <Button
+                android:id="@+id/isSprayingToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginTop="4dp"
+                android:backgroundTint="@color/red"
+                android:backgroundTintMode="src_in"
+                android:text="Master"
+                android:textColor="@color/white"
+                android:textSize="12dp"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </com.google.android.flexbox.FlexboxLayout>
+
+    </RelativeLayout>
+</androidx.constraintlayout.motion.widget.MotionLayout>

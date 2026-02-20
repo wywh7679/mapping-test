@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="850dp"
+    android:height="50dp"
+    android:viewportWidth="950"
+    android:viewportHeight="120">
+    <path
+        android:name="planterBar"
+        android:fillColor="#FF000000"
+        android:pathData="M732.4,98.4L502.9,11.5V-1.7H477v12.8L248.4,98.4H50V120h880V98.4H732.4zM699.2,98.4H502.9V24.1L699.2,98.4zM477,23.7v74.7H281.4L477,23.7z"/>
+
+</vector>

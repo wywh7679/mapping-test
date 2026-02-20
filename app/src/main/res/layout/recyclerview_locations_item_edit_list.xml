@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/listLocationsName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:textSize="22dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:text="" />
+
+    <Button
+        android:id="@+id/listLocationsEditButton"
+        android:layout_width="wrap_content"
+        android:minWidth="78dp"
+        android:layout_height="wrap_content"
+        android:text="Edit"
+        android:padding="5dp"
+        app:layout_constraintRight_toLeftOf="@+id/listLocationsViewButton"
+        app:layout_constraintBottom_toBottomOf="parent" />
+    <Button
+        android:id="@+id/listLocationsViewButton"
+        android:layout_width="wrap_content"
+        android:minWidth="78dp"
+        android:layout_height="wrap_content"
+        android:text="View"
+        android:padding="5dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

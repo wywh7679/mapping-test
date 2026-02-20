@@ -66,6 +66,9 @@ public final class ShapefileExporter {
         buffer.order(ByteOrder.BIG_ENDIAN);
         writeMainHeader(buffer, fileLengthWords, minX, minY, maxX, maxY);
 
+        // Record headers in .shp are BIG_ENDIAN (record number + content length).
+        buffer.order(ByteOrder.BIG_ENDIAN);
+
         buffer.putInt(1); // record number
         buffer.putInt(contentBytes / 2); // content length (16-bit words)
 
@@ -94,6 +97,9 @@ public final class ShapefileExporter {
         ByteBuffer buffer = ByteBuffer.allocate(shxLengthWords * 2);
         buffer.order(ByteOrder.BIG_ENDIAN);
         writeMainHeader(buffer, shxLengthWords, minX, minY, maxX, maxY);
+
+        // Index records in .shx are BIG_ENDIAN (offset + content length).
+        buffer.order(ByteOrder.BIG_ENDIAN);
 
         buffer.putInt(50); // offset (in 16-bit words) where first record starts in .shp
         buffer.putInt(contentBytes / 2); // content length (in 16-bit words)

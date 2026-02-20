@@ -871,18 +871,28 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                 int zoom = 14;
                 int tileX = lonToTileX(center.lng, zoom);
                 int tileY = latToTileY(center.lat, zoom);
-                String tileUrl = "https://tiles.openfreemap.org/styles/bright/" + zoom + "/" + tileX + "/" + tileY + ".png";
-                HttpURLConnection connection = (HttpURLConnection) new URL(tileUrl).openConnection();
-                connection.setConnectTimeout(7000);
-                connection.setReadTimeout(7000);
-                connection.connect();
-                try (InputStream stream = connection.getInputStream()) {
-                    Bitmap bitmap = BitmapFactory.decodeStream(stream);
+
+                String[] tileTemplates = new String[]{
+                        "https://tiles.openfreemap.org/styles/bright/%d/%d/%d.png",
+                        "https://tiles.openfreemap.org/bright/%d/%d/%d.png",
+                        "https://tile.openstreetmap.org/%d/%d/%d.png"
+                };
+
+                Bitmap bitmap = null;
+                for (String template : tileTemplates) {
+                    String tileUrl = String.format(template, zoom, tileX, tileY);
+                    bitmap = tryFetchTile(tileUrl);
                     if (bitmap != null) {
-                        runOnUiThread(() -> renderer.setBasemapBitmap(bitmap));
+                        break;
                     }
                 }
-                connection.disconnect();
+
+                if (bitmap != null) {
+                    Bitmap finalBitmap = bitmap;
+                    runOnUiThread(() -> renderer.setBasemapBitmap(finalBitmap));
+                } else {
+                    Log.e(TAG, "Failed to load basemap tile from all providers.");
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load OpenFreeMap tile", e);
             }
@@ -896,6 +906,32 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
     private int latToTileY(double lat, int zoom) {
         double latRad = Math.toRadians(lat);
         return (int) Math.floor((1.0 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2.0 * (1 << zoom));
+    }
+
+
+    private Bitmap tryFetchTile(String tileUrl) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(tileUrl).openConnection();
+            connection.setConnectTimeout(7000);
+            connection.setReadTimeout(7000);
+            connection.setRequestProperty("User-Agent", "OnsiteFMS-Mapping/1.0");
+            int responseCode = connection.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                Log.w(TAG, "Tile request failed (" + responseCode + "): " + tileUrl);
+                return null;
+            }
+            try (InputStream stream = connection.getInputStream()) {
+                return BitmapFactory.decodeStream(stream);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Tile request error: " + tileUrl, e);
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
     }
 
     private int parseSettingInt(String key, int fallback) {

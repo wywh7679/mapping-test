@@ -97,6 +97,7 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private int fullscreenProgram;
     private FloatBuffer fullscreenVertexBuffer;
     private FloatBuffer fullscreenUvBuffer;
+    private FloatBuffer basemapUvBuffer;
     private int basemapTextureId;
     private boolean showBasemap = false;
     private float basemapAlpha = 0.5f;
@@ -376,6 +377,15 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 1f, 1f
         };
 
+        // Android bitmap rows are top-to-bottom while OpenGL UV origin is bottom-left.
+        // Basemap tiles also render mirrored in this scene, so flip both axes for basemap only.
+        float[] basemapQuadUvs = {
+                1f, 1f,
+                0f, 1f,
+                1f, 0f,
+                0f, 0f
+        };
+
         fullscreenVertexBuffer = ByteBuffer.allocateDirect(quadVerts.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer();
@@ -385,6 +395,11 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer();
         fullscreenUvBuffer.put(quadUvs).position(0);
+
+        basemapUvBuffer = ByteBuffer.allocateDirect(basemapQuadUvs.length * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer();
+        basemapUvBuffer.put(basemapQuadUvs).position(0);
 
         // Compile fullscreen shader program
         fullscreenProgram = createProgram(
@@ -614,17 +629,17 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
 
             for (int i = 0; i < lineIndex; i++) {
-                drawFullscreenTexture(lineTextures[i], 1.0f);
+                drawFullscreenTexture(lineTextures[i], 1.0f, fullscreenUvBuffer);
             }
-            drawFullscreenTexture(mainPathTexture, 1.0f);
+            drawFullscreenTexture(mainPathTexture, 1.0f, fullscreenUvBuffer);
             if (showSteeringLines && steeringLineTexture != 0) {
-                drawFullscreenTexture(steeringLineTexture, 1.0f);
+                drawFullscreenTexture(steeringLineTexture, 1.0f, fullscreenUvBuffer);
             }
             if (showABLines && guideLinesTexture != 0) {
-                drawFullscreenTexture(guideLinesTexture, 1.0f);
+                drawFullscreenTexture(guideLinesTexture, 1.0f, fullscreenUvBuffer);
             }
             if (showABLines && abLineTexture != 0) {
-                drawFullscreenTexture(abLineTexture, 1.0f);
+                drawFullscreenTexture(abLineTexture, 1.0f, fullscreenUvBuffer);
             }
         } else {
             for (StripLine line : listCopyLeft) {
@@ -653,9 +668,9 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         if (!showBasemap || basemapTextureId == 0) {
             return;
         }
-        drawFullscreenTexture(basemapTextureId, basemapAlpha);
+        drawFullscreenTexture(basemapTextureId, basemapAlpha, basemapUvBuffer);
     }
-    private void drawFullscreenTexture(int textureId, float alpha) {
+    private void drawFullscreenTexture(int textureId, float alpha, FloatBuffer uvBuffer) {
         GLES20.glUseProgram(fullscreenProgram);
 
         int positionHandle = glGetAttribLocation(fullscreenProgram, "a_Position");
@@ -672,8 +687,8 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, fullscreenVertexBuffer);
         GLES20.glEnableVertexAttribArray(positionHandle);
 
-        fullscreenUvBuffer.position(0);
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 0, fullscreenUvBuffer);
+        uvBuffer.position(0);
+        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 0, uvBuffer);
         GLES20.glEnableVertexAttribArray(texCoordHandle);
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);

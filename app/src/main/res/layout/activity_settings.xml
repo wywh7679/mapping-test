@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:scrollbars="vertical">
+
     <RelativeLayout
         android:id="@+id/relative_top"
         android:layout_width="match_parent"
@@ -17,7 +18,6 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
-
 
         <ImageView
             android:id="@+id/homeBtn"
@@ -36,241 +36,492 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/relative_top">
 
-        <RelativeLayout
+        <LinearLayout
             android:id="@+id/settings_home"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:background="#7a7777"
             android:clickable="true"
             android:focusable="true"
             android:focusableInTouchMode="true"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
-            android:scrollbars="vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            android:orientation="vertical"
+            android:padding="10dp">
 
-            <TableLayout
-                android:id="@+id/settings_table"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content">
-
-                <TableRow
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="15dp"
-                    android:weightSum="6">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="6"
-                        android:text="Vehicle Track"
-                        android:textSize="28sp" />
-                </TableRow>
-                <TableRow
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="15dp"
-                    android:weightSum="6">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="4"
-                        android:text="Color" />
-                    <Button
-                        android:id="@+id/color_picker_button"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="2"
-                        android:background="@color/green"
-                        android:clickable="true"
-                        android:text="Choose Color" />
-                </TableRow>
-
-                <TableRow
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="15dp"
-                    android:weightSum="6">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="4"
-                        android:text="Highlight Color" />
-
-                    <Button
-                        android:id="@+id/color_picker_button2"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="2"
-                        android:background="@color/red"
-                        android:clickable="true"
-                        android:text="Choose Color" />
-                </TableRow>
-
-                <TableRow
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="15dp"
-                    android:weightSum="6">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="4"
-                        android:text="Vehicle Width In Inches" />
-
-                    <EditText
-                        android:id="@+id/thickPathStroke"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="2"
-                        android:imeOptions="flagNoExtractUi"
-                        android:inputType="number"
-                        android:singleLine="true"
-                        android:tooltipText="thickPathStroke" />
-                </TableRow>
-            </TableLayout>
-            <TableLayout
-                android:id="@+id/table_sprayer"
-                android:layout_width="fill_parent"
-                android:layout_height="match_parent"
-                android:layout_below="@id/settings_table"
-                android:scrollbars="vertical">
-
-            <TableRow
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="15dp"
-                android:weightSum="6">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="6"
-                    android:text="Sprayer Configuration"
-                    android:textSize="28sp" />
-
-
-            </TableRow>
-            </TableLayout>
-            <TableLayout
-                android:id="@+id/settings_table_sprayer"
-                android:layout_width="fill_parent"
-                android:layout_height="match_parent"
-                android:layout_below="@id/table_sprayer"
-                android:scrollbars="vertical">
-
-
-
-                <TableRow
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="15dp"
-                    android:weightSum="6">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="4"
-                        android:text="How many sections do you have?" />
-
-                    <EditText
-                        android:id="@+id/totalNumberSections"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="2"
-                        android:imeOptions="flagNoExtractUi"
-                        android:inputType="number"
-                        android:singleLine="true"
-                        android:tooltipText="totalNumberSections" />
-                </TableRow>
-
-            </TableLayout>
-            <TableLayout
-                android:id="@+id/settings_table_sprayer_sections"
-                android:layout_width="fill_parent"
-                android:layout_height="match_parent"
-                android:layout_below="@id/settings_table_sprayer"
-                android:scrollbars="vertical">
-
-            </TableLayout>
-            <TableLayout
-                android:id="@+id/settings_buttons"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/settings_table_sprayer_sections"
-                android:scrollbars="vertical">
-                <TableRow
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="15dp"
-                    android:weightSum="6">
-                    <Button
-                        android:id="@+id/back_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="3"
-                        android:text="Back"
-                        android:visibility="gone" />
-
-                    <Button
-                        android:id="@+id/next_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="right"
-                        android:layout_weight="3"
-                        android:text="Next"
-                        android:visibility="visible" />
-
-                    <Button
-                        android:id="@+id/done_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="3"
-                        android:text="Done"
-                        android:visibility="gone" />
-                </TableRow>
-
-            </TableLayout>
-
-            <ImageView
-                android:id="@+id/imageView2"
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/settings_tabs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/settings_buttons"
-                android:layout_marginLeft="-35dp"
-                android:layout_marginTop="15dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/planter_section_graph" />
-            <TableLayout
-                android:id="@+id/settings_table_sprayer_preview_table"
-                android:layout_width="fill_parent"
-                android:layout_height="match_parent"
-                android:layout_below="@id/imageView2"
-                android:scrollbars="vertical">
-                <TableRow
-                    android:id="@+id/settings_table_sprayer_preview"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:minHeight="40dp"
-                    android:weightSum="24">
-                </TableRow>
-            </TableLayout>
+                app:tabIndicatorColor="@android:color/white"
+                app:tabIndicatorFullWidth="false"
+                app:tabMode="fixed" />
 
-            <Button
-                android:id="@+id/backButton"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/tab_vehicle_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/settings_table_sprayer_preview_table"
-                android:layout_marginTop="10dp"
-                android:text="Back"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintLeft_toLeftOf="parent" />
-        </RelativeLayout>
+                android:orientation="vertical">
 
+                <TableLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="6"
+                            android:text="Vehicle Settings"
+                            android:textSize="28sp" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Vehicle Width In Inches" />
+
+                        <EditText
+                            android:id="@+id/thickPathStroke"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:imeOptions="flagNoExtractUi"
+                            android:inputType="number"
+                            android:singleLine="true"
+                            android:tooltipText="thickPathStroke" />
+                    </TableRow>
+                </TableLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tab_display_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TableLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="6"
+                            android:text="Display Settings"
+                            android:textSize="28sp" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Light / Dark Mode" />
+
+                        <Spinner
+                            android:id="@+id/theme_spinner"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Text Size Multiplier" />
+
+                        <EditText
+                            android:id="@+id/text_scale_multiplier"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:imeOptions="flagNoExtractUi"
+                            android:inputType="numberDecimal"
+                            android:singleLine="true"
+                            android:tooltipText="textScaleMultiplier" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Measurement Units" />
+
+                        <Spinner
+                            android:id="@+id/unit_spinner"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Vehicle Track Color" />
+
+                        <Button
+                            android:id="@+id/color_picker_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:background="@color/green"
+                            android:clickable="true"
+                            android:text="Choose Color" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Vehicle Highlight Color" />
+
+                        <Button
+                            android:id="@+id/color_picker_button2"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:background="@color/red"
+                            android:clickable="true"
+                            android:text="Choose Color" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Show Grid" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_show_grid"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Grid Color" />
+
+                        <Button
+                            android:id="@+id/grid_color_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Choose Color" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Show Solid Background" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_show_background"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Background Color" />
+
+                        <Button
+                            android:id="@+id/background_color_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Choose Color" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Show A/B Lines" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_show_ab_lines"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="A/B Lines Color" />
+
+                        <Button
+                            android:id="@+id/ab_line_color_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Choose Color" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Show Steering Lines" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_show_steering_lines"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="Steering Lines Color" />
+
+                        <Button
+                            android:id="@+id/steering_line_color_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="Choose Color" />
+                    </TableRow>
+                </TableLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tab_sprayer_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TableLayout
+                    android:id="@+id/table_sprayer"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content">
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="6"
+                            android:text="Sprayer Configuration"
+                            android:textSize="28sp" />
+                    </TableRow>
+                </TableLayout>
+
+                <TableLayout
+                    android:id="@+id/settings_table_sprayer"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content">
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="4"
+                            android:text="How many sections do you have?" />
+
+                        <EditText
+                            android:id="@+id/totalNumberSections"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:imeOptions="flagNoExtractUi"
+                            android:inputType="number"
+                            android:singleLine="true"
+                            android:tooltipText="totalNumberSections" />
+                    </TableRow>
+                </TableLayout>
+
+                <TableLayout
+                    android:id="@+id/settings_table_sprayer_sections"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content" />
+
+                <TableLayout
+                    android:id="@+id/settings_buttons"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content">
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="15dp"
+                        android:weightSum="6">
+
+                        <Button
+                            android:id="@+id/back_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="3"
+                            android:text="Back"
+                            android:visibility="gone" />
+
+                        <Button
+                            android:id="@+id/next_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="right"
+                            android:layout_weight="3"
+                            android:text="Next"
+                            android:visibility="visible" />
+
+                        <Button
+                            android:id="@+id/done_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="3"
+                            android:text="Done"
+                            android:visibility="gone" />
+                    </TableRow>
+                </TableLayout>
+
+                <ImageView
+                    android:id="@+id/imageView2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="-35dp"
+                    android:layout_marginTop="15dp"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/planter_section_graph" />
+
+                <TableLayout
+                    android:id="@+id/settings_table_sprayer_preview_table"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content">
+
+                    <TableRow
+                        android:id="@+id/settings_table_sprayer_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:minHeight="40dp"
+                        android:weightSum="24" />
+                </TableLayout>
+
+                <Button
+                    android:id="@+id/backButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Back"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintLeft_toLeftOf="parent" />
+            </LinearLayout>
+        </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

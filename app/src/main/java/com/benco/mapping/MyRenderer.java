@@ -65,6 +65,10 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private final float[] abLineColor = new float[]{0f, 1f, 0f, 1f};
     private final float[] guideLineColor = new float[]{1f, 1f, 1f, 1f};
     private final float[] steeringLineColor = new float[]{0f, 0f, 1f, 1f};
+    private boolean showGrid = true;
+    private boolean showSolidBackground = true;
+    private boolean showABLines = true;
+    private boolean showSteeringLines = true;
     private float mainPathHalfWidth = 1.0f;
     private int texturedProgram;
     private int mainLineTextureId;
@@ -456,6 +460,9 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         gridAzimuth = degrees;
     }
     private void drawGrid() {
+        if (!showGrid && !showSolidBackground) {
+            return;
+        }
         GLES20.glUseProgram(program);
 
         int colorHandle = GLES20.glGetUniformLocation(program, "u_Color");
@@ -489,7 +496,7 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, modelViewProjectionMatrix, 0);
 
         // Draw the grid background
-        if (gridBackgroundBuffer != null) {
+        if (showSolidBackground && gridBackgroundBuffer != null) {
             gridBackgroundBuffer.position(0);
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, gridBackgroundBuffer);
             GLES20.glEnableVertexAttribArray(positionHandle);
@@ -499,11 +506,13 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         }
 
         // Draw the grid lines
-        gridVertexBuffer.position(0);
-        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, gridVertexBuffer);
-        GLES20.glEnableVertexAttribArray(positionHandle);
-        GLES20.glUniform4f(colorHandle, gridRed, gridGreen, gridBlue, gridAlpha);
-        GLES20.glDrawArrays(GLES20.GL_LINES, 0, gridVertexBuffer.capacity()/COORDS_PER_VERTEX); // Adjust based on vertex count
+        if (showGrid) {
+            gridVertexBuffer.position(0);
+            GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, gridVertexBuffer);
+            GLES20.glEnableVertexAttribArray(positionHandle);
+            GLES20.glUniform4f(colorHandle, gridRed, gridGreen, gridBlue, gridAlpha);
+            GLES20.glDrawArrays(GLES20.GL_LINES, 0, gridVertexBuffer.capacity()/COORDS_PER_VERTEX); // Adjust based on vertex count
+        }
 
         GLES20.glDisableVertexAttribArray(positionHandle);
     }
@@ -524,19 +533,21 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
         if (useFrameBuffer) {
             renderLineBufferToFbo(mainPathBuffer, mainPathCount, mainPathColor, mainPathFbo);
-            if (steeringLineBuffer != null && steeringLineCount > 0) {
+            if (showSteeringLines && steeringLineBuffer != null && steeringLineCount > 0) {
                 renderLineBufferToFbo(steeringLineBuffer, steeringLineCount, steeringLineColor, steeringLineFbo);
             }
-            if (!guideLineBuffers.isEmpty()) {
+            if (showABLines && !guideLineBuffers.isEmpty()) {
                 renderGuideLinesToFbo(guideLinesFbo, guideLineColor);
             }
-            renderLineBufferToFbo(abLineBuffer, abLineCount, abLineColor, abLineFbo);
+            if (showABLines) {
+                renderLineBufferToFbo(abLineBuffer, abLineCount, abLineColor, abLineFbo);
+            }
         } else {
             drawLineStrip(mainPathBuffer, mainPathCount, positionHandle, colorHandle, mainPathColor);
-            if (steeringLineBuffer != null && steeringLineCount > 0) {
+            if (showSteeringLines && steeringLineBuffer != null && steeringLineCount > 0) {
                 drawLineStrip(steeringLineBuffer, steeringLineCount, positionHandle, colorHandle, steeringLineColor);
             }
-            if (!guideLineBuffers.isEmpty()) {
+            if (showABLines && !guideLineBuffers.isEmpty()) {
                 for (int i = 0; i < guideLineBuffers.size(); i++) {
                     FloatBuffer buffer = guideLineBuffers.get(i);
                     int count = guideLineCounts.get(i);
@@ -598,13 +609,13 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 drawFullscreenTexture(lineTextures[i]);
             }
             drawFullscreenTexture(mainPathTexture);
-            if (steeringLineTexture != 0) {
+            if (showSteeringLines && steeringLineTexture != 0) {
                 drawFullscreenTexture(steeringLineTexture);
             }
-            if (guideLinesTexture != 0) {
+            if (showABLines && guideLinesTexture != 0) {
                 drawFullscreenTexture(guideLinesTexture);
             }
-            if (abLineTexture != 0) {
+            if (showABLines && abLineTexture != 0) {
                 drawFullscreenTexture(abLineTexture);
             }
         } else {
@@ -844,6 +855,49 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
             mainPathBuffer.get(mainVertices);
             mainPathBuffer.position(0);
             rebuildThickPath(mainVertices);
+        }
+    }
+
+    public void setDisplayToggles(boolean showGrid, boolean showSolidBackground, boolean showABLines, boolean showSteeringLines) {
+        this.showGrid = showGrid;
+        this.showSolidBackground = showSolidBackground;
+        this.showABLines = showABLines;
+        this.showSteeringLines = showSteeringLines;
+    }
+
+    public void setGridColor(int colorInt) {
+        setColorFromIntWithAlpha(colorInt, true, false);
+    }
+
+    public void setGridBackgroundColor(int colorInt) {
+        setColorFromIntWithAlpha(colorInt, false, true);
+    }
+
+    public void setAbLineColor(int colorInt) {
+        setColor(abLineColor, colorInt);
+        setColor(guideLineColor, colorInt);
+    }
+
+    public void setSteeringLineColor(int colorInt) {
+        setColor(steeringLineColor, colorInt);
+    }
+
+    private void setColorFromIntWithAlpha(int colorInt, boolean forGrid, boolean forBackground) {
+        float red = Color.red(colorInt) / 255f;
+        float green = Color.green(colorInt) / 255f;
+        float blue = Color.blue(colorInt) / 255f;
+        float alpha = Color.alpha(colorInt) / 255f;
+        if (forGrid) {
+            gridRed = red;
+            gridGreen = green;
+            gridBlue = blue;
+            gridAlpha = alpha;
+        }
+        if (forBackground) {
+            gridBackgroundRed = red;
+            gridBackgroundGreen = green;
+            gridBackgroundBlue = blue;
+            gridBackgroundAlpha = alpha;
         }
     }
 

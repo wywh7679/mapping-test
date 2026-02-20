@@ -99,11 +99,34 @@ public class BaseActivity extends AppCompatActivity {
         sharedPreferences = getSharedPreferences("ThemePreferences", Context.MODE_PRIVATE);
         // The value will be default as empty string because for the very first time when the app is opened, there is nothing to show
         String AppTheme = sharedPreferences.getString("theme", "dark");
+        settings.put("theme", AppTheme);
         if (AppTheme.equals("light")) {
             setTheme(R.style.AppTheme);
         } else {
             setTheme(R.style.AppThemeDark);
         }
+        String textScaleMultiplier = sharedPreferences.getString("textScaleMultiplier", "1.0");
+        settings.put("textScaleMultiplier", textScaleMultiplier);
+        String unitSystem = sharedPreferences.getString("unitSystem", "us");
+        settings.put("unitSystem", unitSystem);
+        boolean showGrid = sharedPreferences.getBoolean("showGrid", true);
+        settings.put("showGrid", showGrid);
+        boolean showSolidBackground = sharedPreferences.getBoolean("showSolidBackground", true);
+        settings.put("showSolidBackground", showSolidBackground);
+        boolean showABLines = sharedPreferences.getBoolean("showABLines", true);
+        settings.put("showABLines", showABLines);
+        boolean showSteeringLines = sharedPreferences.getBoolean("showSteeringLines", true);
+        settings.put("showSteeringLines", showSteeringLines);
+
+        int gridColor = sharedPreferences.getInt("gridColor", Color.parseColor("#C0780000"));
+        settings.put("gridColor", gridColor);
+        int backgroundColor = sharedPreferences.getInt("backgroundColor", Color.parseColor("#C71F1F1F"));
+        settings.put("backgroundColor", backgroundColor);
+        int abLineColor = sharedPreferences.getInt("abLineColor", Color.parseColor("#FF00FF00"));
+        settings.put("abLineColor", abLineColor);
+        int steeringLineColor = sharedPreferences.getInt("steeringLineColor", Color.parseColor("#FF0000FF"));
+        settings.put("steeringLineColor", steeringLineColor);
+
         int mainPathColor = sharedPreferences.getInt("mainPathColor", R.color.green);
         //Log.d(TAG, "mainPathColor: "+mainPathColor);
         settings.put("mainPathColor", mainPathColor);

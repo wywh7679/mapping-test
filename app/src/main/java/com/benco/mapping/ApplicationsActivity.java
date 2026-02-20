@@ -1,8 +1,10 @@
 package com.benco.mapping;
 
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,6 +27,8 @@ import com.google.gson.Gson;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -134,9 +138,13 @@ public class ApplicationsActivity extends BaseActivity {
         pendingExportApplication = application;
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/zip");
+        intent.setType("*/*");
         intent.putExtra(Intent.EXTRA_TITLE, "application_" + application.aid + ".zip");
-        exportShapefileLauncher.launch(intent);
+        try {
+            exportShapefileLauncher.launch(intent);
+        } catch (ActivityNotFoundException e) {
+            exportApplicationToAppStorage(application);
+        }
     }
 
     private void exportApplicationToShapefile(Uri destinationUri, Applications application) {
@@ -156,6 +164,37 @@ public class ApplicationsActivity extends BaseActivity {
                 ShapefileExporter.exportPolylineZip(zipOutputStream, baseName, application.aid, pathPoints);
                 runOnUiThread(() -> Toast.makeText(this,
                         "Exported shapefile ZIP: " + baseName + ".zip", Toast.LENGTH_LONG).show());
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    private void exportApplicationToAppStorage(Applications application) {
+        new Thread(() -> {
+            List<ApplicationsData> pathPoints = applicationsDataViewModel.getAllApplicationsListVm(application.aid);
+            if (pathPoints == null || pathPoints.size() < 2) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        "Not enough GPS data to export shapefile.", Toast.LENGTH_LONG).show());
+                return;
+            }
+
+            String fileName = "application_" + application.aid + ".zip";
+            File exportDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (exportDir == null) {
+                exportDir = getFilesDir();
+            }
+            File outputFile = new File(exportDir, fileName);
+
+            try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile);
+                 ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream)) {
+                String baseName = "application_" + application.aid;
+                ShapefileExporter.exportPolylineZip(zipOutputStream, baseName, application.aid, pathPoints);
+                File finalExportDir = exportDir;
+                runOnUiThread(() -> Toast.makeText(this,
+                        "No document app found. Export saved to: " + finalExportDir.getAbsolutePath() + "/" + fileName,
+                        Toast.LENGTH_LONG).show());
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(this,
                         "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show());

@@ -25,8 +25,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import androidx.appcompat.widget.SwitchCompat;
-
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.function.BiConsumer;
@@ -143,98 +141,6 @@ public class SettingsActivity extends BaseActivity {
         vehicleTabContent.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
         displayTabContent.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
         sprayerTabContent.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
-    }
-
-    private void bindDisplaySettings() {
-        bindThemeSpinner();
-        bindUnitSpinner();
-
-        EditText textScaleInput = findViewById(R.id.text_scale_multiplier);
-        textScaleInput.setText(settings.get("textScaleMultiplier").toString());
-        textScaleInput.setTag("textScaleMultiplier");
-        textScaleInput.setOnEditorActionListener(settingsEditTextListener);
-        textScaleInput.setOnFocusChangeListener(settingsEditTextFocusListener);
-
-        bindToggle(R.id.switch_show_grid, "showGrid", true);
-        bindToggle(R.id.switch_show_background, "showSolidBackground", true);
-        bindToggle(R.id.switch_show_ab_lines, "showABLines", true);
-        bindToggle(R.id.switch_show_steering_lines, "showSteeringLines", true);
-
-        bindColorPickerButton(R.id.grid_color_button, "gridColor", false);
-        bindColorPickerButton(R.id.background_color_button, "backgroundColor", false);
-        bindColorPickerButton(R.id.ab_line_color_button, "abLineColor", false);
-        bindColorPickerButton(R.id.steering_line_color_button, "steeringLineColor", false);
-    }
-
-    private void bindThemeSpinner() {
-        Spinner themeSpinner = findViewById(R.id.theme_spinner);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
-                new String[]{"Light", "Dark"});
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        themeSpinner.setAdapter(adapter);
-
-        String currentTheme = settings.get("theme").toString();
-        int themePosition = "light".equalsIgnoreCase(currentTheme) ? 0 : 1;
-        themeSpinner.setSelection(themePosition, false);
-        themeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedTheme = position == 0 ? "light" : "dark";
-                if (selectedTheme.equals(settings.get("theme"))) {
-                    return;
-                }
-                settings.put("theme", selectedTheme);
-                sharedPreferences.edit().putString("theme", selectedTheme).apply();
-                recreate();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-    }
-
-    private void bindUnitSpinner() {
-        Spinner unitSpinner = findViewById(R.id.unit_spinner);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
-                new String[]{"US", "Metric"});
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        unitSpinner.setAdapter(adapter);
-
-        String currentUnits = settings.get("unitSystem").toString();
-        int position = "metric".equalsIgnoreCase(currentUnits) ? 1 : 0;
-        unitSpinner.setSelection(position, false);
-        unitSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int itemPosition, long id) {
-                String selectedUnits = itemPosition == 1 ? "metric" : "us";
-                settings.put("unitSystem", selectedUnits);
-                sharedPreferences.edit().putString("unitSystem", selectedUnits).apply();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-    }
-
-    private void bindToggle(int switchId, String key, boolean fallback) {
-        SwitchCompat toggle = findViewById(switchId);
-        Object value = settings.get(key);
-        boolean checked = value instanceof Boolean ? (Boolean) value : fallback;
-        toggle.setChecked(checked);
-        toggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            settings.put(key, isChecked);
-            sharedPreferences.edit().putBoolean(key, isChecked).apply();
-        });
-    }
-
-    private void bindColorPickerButton(int buttonId, String key, boolean withAlpha) {
-        Button button = findViewById(buttonId);
-        Object colorObject = settings.get(key);
-        int color = colorObject instanceof Integer ? (Integer) colorObject : ContextCompat.getColor(this, R.color.white);
-        button.setBackgroundColor(color);
-        button.setOnClickListener(v -> showDynamicColorPickerDialog(key, v, withAlpha));
     }
 
     private void startForm() {

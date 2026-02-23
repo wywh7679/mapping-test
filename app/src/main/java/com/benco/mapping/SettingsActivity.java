@@ -29,6 +29,8 @@ import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.android.material.tabs.TabLayout;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiConsumer;
 public class SettingsActivity extends BaseActivity {
     private ImageView homeBtn;
@@ -44,6 +46,7 @@ public class SettingsActivity extends BaseActivity {
     private View vehicleTabContent;
     private View displayTabContent;
     private View sprayerTabContent;
+    private boolean suppressProfileSelection = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,6 +92,8 @@ public class SettingsActivity extends BaseActivity {
             public void onTabReselected(TabLayout.Tab tab) {
             }
         });
+        bindProfileControls();
+
         Button colorPickerButton = findViewById(R.id.color_picker_button);
         colorPickerButton.setBackgroundColor((int) settings.get("mainPathColor"));
         colorPickerButton.setOnClickListener(new View.OnClickListener() {
@@ -175,6 +180,62 @@ public class SettingsActivity extends BaseActivity {
         basemapOpacity.setOnFocusChangeListener(settingsEditTextFocusListener);
     }
 
+    private void bindProfileControls() {
+        Spinner profileSpinner = findViewById(R.id.profile_spinner);
+        EditText profileNameInput = findViewById(R.id.profile_name_input);
+        Button profileSaveButton = findViewById(R.id.profile_save_button);
+
+        List<String> profiles = getSettingsProfiles();
+        if (profiles.isEmpty()) {
+            profiles = new ArrayList<>();
+            profiles.add("default");
+        }
+        final List<String> profileOptions = new ArrayList<>(profiles);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, profileOptions);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        profileSpinner.setAdapter(adapter);
+
+        String activeProfile = getActiveSettingsProfile();
+        int activeIndex = profileOptions.indexOf(activeProfile);
+        if (activeIndex < 0) {
+            activeIndex = 0;
+        }
+        suppressProfileSelection = true;
+        profileSpinner.setSelection(activeIndex, false);
+        suppressProfileSelection = false;
+
+        profileSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (suppressProfileSelection) {
+                    return;
+                }
+                String selectedProfile = profileOptions.get(position);
+                if (selectedProfile.equals(getActiveSettingsProfile())) {
+                    return;
+                }
+                saveSettingsProfileName(selectedProfile);
+                recreate();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        profileSaveButton.setOnClickListener(v -> {
+            String newProfile = profileNameInput.getText() == null ? "" : profileNameInput.getText().toString().trim();
+            if (newProfile.isEmpty()) {
+                Toast.makeText(this, "Enter a profile name", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            saveSettingsProfileName(newProfile);
+            Toast.makeText(this, "Switched to profile: " + newProfile, Toast.LENGTH_SHORT).show();
+            recreate();
+        });
+    }
+
     private void bindThemeSpinner() {
         Spinner themeSpinner = findViewById(R.id.theme_spinner);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
@@ -193,7 +254,7 @@ public class SettingsActivity extends BaseActivity {
                     return;
                 }
                 settings.put("theme", selectedTheme);
-                sharedPreferences.edit().putString("theme", selectedTheme).apply();
+                putProfileString("theme", selectedTheme);
                 recreate();
             }
 
@@ -218,7 +279,7 @@ public class SettingsActivity extends BaseActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int itemPosition, long id) {
                 String selectedUnits = itemPosition == 1 ? "metric" : "us";
                 settings.put("unitSystem", selectedUnits);
-                sharedPreferences.edit().putString("unitSystem", selectedUnits).apply();
+                putProfileString("unitSystem", selectedUnits);
             }
 
             @Override
@@ -234,7 +295,7 @@ public class SettingsActivity extends BaseActivity {
         toggle.setChecked(checked);
         toggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
             settings.put(key, isChecked);
-            sharedPreferences.edit().putBoolean(key, isChecked).apply();
+            putProfileBoolean(key, isChecked);
         });
     }
 

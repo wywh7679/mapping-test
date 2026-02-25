@@ -411,6 +411,9 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl) {
+        float[] updatedView = updateViewMatrix();
+        System.arraycopy(updatedView, 0, viewMatrix, 0, 16);
+
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
         // Draw lines with blending (disable depth if needed)
         GLES20.glEnable(GLES20.GL_BLEND);
@@ -421,8 +424,6 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         drawGrid();
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         drawPathLines();
-        float[] updatedView = updateViewMatrix();
-        System.arraycopy(updatedView, 0, viewMatrix, 0, 16);
     }
 
     public void captureInitialCamera() {
@@ -1059,8 +1060,10 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
             float y = lineVertices[idx + 1];
             float z = lineVertices[idx + 2];
 
-            vehicleX = x;
-            vehicleZ = y;
+            if (i == pointCount - 1) {
+                vehicleX = x;
+                vehicleZ = z;
+            }
 
             float dirX;
             float dirZ;

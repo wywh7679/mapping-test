@@ -12,6 +12,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -139,6 +140,16 @@ public class BaseActivity extends AppCompatActivity {
         return sharedPreferences.getInt(key, fallback);
     }
 
+    protected void dismissKeyboard(View view) {
+        if (view == null) {
+            return;
+        }
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -243,8 +254,8 @@ public class BaseActivity extends AppCompatActivity {
         settingsEditTextListener = new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE ||
-                        (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO || actionId == EditorInfo.IME_ACTION_SEND ||
+                        (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
                     String inputText = v.getText().toString();
                     String prefKey = "";
                     if (v.getTag() != null) {
@@ -268,6 +279,8 @@ public class BaseActivity extends AppCompatActivity {
                     }
                     Log.d("oneditoraction", prefKey);
                     putProfileString(prefKey, inputText);
+                    dismissKeyboard(v);
+                    v.clearFocus();
                     return true; // Consume the event
                 }
                 return false;

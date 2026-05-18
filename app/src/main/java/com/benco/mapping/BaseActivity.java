@@ -101,6 +101,76 @@ public class BaseActivity extends AppCompatActivity {
         return out;
     }
 
+
+    protected boolean removeSettingsProfile(String profileName) {
+        String trimmed = profileName == null ? "" : profileName.trim();
+        if (trimmed.isEmpty() || DEFAULT_SETTINGS_PROFILE.equalsIgnoreCase(trimmed)) {
+            return false;
+        }
+        Set<String> profiles = new HashSet<>(sharedPreferences.getStringSet(SETTINGS_PROFILE_LIST_KEY, new HashSet<>()));
+        if (!profiles.remove(trimmed)) {
+            return false;
+        }
+
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        Set<String> keys = sharedPreferences.getAll().keySet();
+        String prefix = "settingsProfile." + trimmed + ".";
+        for (String key : keys) {
+            if (key.startsWith(prefix)) {
+                editor.remove(key);
+            }
+        }
+        editor.putStringSet(SETTINGS_PROFILE_LIST_KEY, profiles);
+
+        String active = getActiveSettingsProfile();
+        if (trimmed.equals(active)) {
+            editor.putString(SETTINGS_PROFILE_KEY, DEFAULT_SETTINGS_PROFILE);
+            settings.put("activeSettingsProfile", DEFAULT_SETTINGS_PROFILE);
+        }
+        editor.apply();
+        return true;
+    }
+
+    protected boolean renameSettingsProfile(String oldName, String newName) {
+        String oldTrim = oldName == null ? "" : oldName.trim();
+        String newTrim = newName == null ? "" : newName.trim();
+        if (oldTrim.isEmpty() || newTrim.isEmpty() || DEFAULT_SETTINGS_PROFILE.equalsIgnoreCase(oldTrim)) {
+            return false;
+        }
+        if (oldTrim.equals(newTrim)) {
+            return true;
+        }
+
+        Set<String> profiles = new HashSet<>(sharedPreferences.getStringSet(SETTINGS_PROFILE_LIST_KEY, new HashSet<>()));
+        if (!profiles.contains(oldTrim)) {
+            return false;
+        }
+        profiles.remove(oldTrim);
+        profiles.add(newTrim);
+
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        String oldPrefix = "settingsProfile." + oldTrim + ".";
+        String newPrefix = "settingsProfile." + newTrim + ".";
+        for (String key : sharedPreferences.getAll().keySet()) {
+            if (key.startsWith(oldPrefix)) {
+                String suffix = key.substring(oldPrefix.length());
+                Object value = sharedPreferences.getAll().get(key);
+                if (value instanceof String) editor.putString(newPrefix + suffix, (String) value);
+                else if (value instanceof Boolean) editor.putBoolean(newPrefix + suffix, (Boolean) value);
+                else if (value instanceof Integer) editor.putInt(newPrefix + suffix, (Integer) value);
+                else if (value instanceof Float) editor.putFloat(newPrefix + suffix, (Float) value);
+                else if (value instanceof Long) editor.putLong(newPrefix + suffix, (Long) value);
+                editor.remove(key);
+            }
+        }
+        editor.putStringSet(SETTINGS_PROFILE_LIST_KEY, profiles);
+        if (oldTrim.equals(getActiveSettingsProfile())) {
+            editor.putString(SETTINGS_PROFILE_KEY, newTrim);
+            settings.put("activeSettingsProfile", newTrim);
+        }
+        editor.apply();
+        return true;
+    }
     protected void putProfileString(String key, String value) {
         sharedPreferences.edit().putString(profileKey(key), value).apply();
         settings.put(key, value);

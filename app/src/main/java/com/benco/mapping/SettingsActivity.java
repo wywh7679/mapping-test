@@ -43,6 +43,7 @@ public class SettingsActivity extends BaseActivity {
     private int currentRow = 0;
     private Button wizardBackButton, nextButton, doneButton, closeButton;
     private TableRow[] tableRows;
+    private View vehicleProfilesTabContent;
     private View vehicleTabContent;
     private View displayTabContent;
     private View sprayerTabContent;
@@ -71,10 +72,12 @@ public class SettingsActivity extends BaseActivity {
         });
 
         TabLayout settingsTabs = findViewById(R.id.settings_tabs);
+        vehicleProfilesTabContent = findViewById(R.id.tab_vehicle_profiles_content);
         vehicleTabContent = findViewById(R.id.tab_vehicle_content);
         displayTabContent = findViewById(R.id.tab_display_content);
         sprayerTabContent = findViewById(R.id.tab_sprayer_content);
 
+        settingsTabs.addTab(settingsTabs.newTab().setText("Vehicle Profiles"));
         settingsTabs.addTab(settingsTabs.newTab().setText("Vehicle Settings"));
         settingsTabs.addTab(settingsTabs.newTab().setText("Display Settings"));
         settingsTabs.addTab(settingsTabs.newTab().setText("Sprayer Configuration"));
@@ -145,9 +148,10 @@ public class SettingsActivity extends BaseActivity {
         startForm();
     }
     private void showTab(int position) {
-        vehicleTabContent.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
-        displayTabContent.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
-        sprayerTabContent.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+        vehicleProfilesTabContent.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
+        vehicleTabContent.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
+        displayTabContent.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+        sprayerTabContent.setVisibility(position == 3 ? View.VISIBLE : View.GONE);
     }
 
     private void bindDisplaySettings() {
@@ -184,6 +188,8 @@ public class SettingsActivity extends BaseActivity {
         Spinner profileSpinner = findViewById(R.id.profile_spinner);
         EditText profileNameInput = findViewById(R.id.profile_name_input);
         Button profileSaveButton = findViewById(R.id.profile_save_button);
+        Button profileUpdateButton = findViewById(R.id.profile_update_button);
+        Button profileRemoveButton = findViewById(R.id.profile_remove_button);
 
         List<String> profiles = getSettingsProfiles();
         if (profiles.isEmpty()) {
@@ -227,11 +233,36 @@ public class SettingsActivity extends BaseActivity {
         profileSaveButton.setOnClickListener(v -> {
             String newProfile = profileNameInput.getText() == null ? "" : profileNameInput.getText().toString().trim();
             if (newProfile.isEmpty()) {
-                Toast.makeText(this, "Enter a profile name", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Enter a vehicle name", Toast.LENGTH_SHORT).show();
                 return;
             }
             saveSettingsProfileName(newProfile);
-            Toast.makeText(this, "Switched to profile: " + newProfile, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vehicle selected: " + newProfile, Toast.LENGTH_SHORT).show();
+            recreate();
+        });
+
+        profileUpdateButton.setOnClickListener(v -> {
+            String currentProfile = getActiveSettingsProfile();
+            String newProfile = profileNameInput.getText() == null ? "" : profileNameInput.getText().toString().trim();
+            if (newProfile.isEmpty()) {
+                Toast.makeText(this, "Enter a new vehicle name", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!renameSettingsProfile(currentProfile, newProfile)) {
+                Toast.makeText(this, "Unable to rename vehicle profile", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Toast.makeText(this, "Vehicle renamed to: " + newProfile, Toast.LENGTH_SHORT).show();
+            recreate();
+        });
+
+        profileRemoveButton.setOnClickListener(v -> {
+            String currentProfile = getActiveSettingsProfile();
+            if (!removeSettingsProfile(currentProfile)) {
+                Toast.makeText(this, "Default vehicle cannot be removed", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Toast.makeText(this, "Vehicle removed: " + currentProfile, Toast.LENGTH_SHORT).show();
             recreate();
         });
     }

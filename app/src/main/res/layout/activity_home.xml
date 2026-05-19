@@ -7,6 +7,33 @@
     android:orientation="vertical">
 
     <Button
+        android:id="@+id/resumeLastApplicationBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Resume Last Application"
+        android:textSize="28sp"
+        android:padding="24dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/newApplicationBtn"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <Button
+        android:id="@+id/newApplicationBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="New Application"
+        android:textSize="28sp"
+        android:padding="24dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/resumeLastApplicationBtn"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/settingsBtn" />
+
+    <Button
         android:id="@+id/threeDeeBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

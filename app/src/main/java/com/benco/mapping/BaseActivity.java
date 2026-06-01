@@ -48,6 +48,8 @@ import androidx.core.content.ContextCompat;
 
 public class BaseActivity extends AppCompatActivity {
     protected static final boolean USE_SIMPLIFIED_HOME = true;
+    // Toggle simplified Resume/New buttons between 3D OpenGL mapping (true) and 2D mapping (false).
+    protected static final boolean USE_OPENGL_SIMPLIFIED_MAPPING = true;
     private static final String SETTINGS_PROFILE_KEY = "activeSettingsProfile";
     private static final String SETTINGS_PROFILE_LIST_KEY = "settingsProfiles";
     private static final String DEFAULT_SETTINGS_PROFILE = "default";

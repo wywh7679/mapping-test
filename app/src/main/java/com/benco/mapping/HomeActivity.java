@@ -111,7 +111,7 @@ public class HomeActivity extends BaseActivity {
                         Toast.makeText(this, "No previous application found.", Toast.LENGTH_LONG).show();
                         return;
                     }
-                    startMainActivity(defaultLid, lastApplication.aid);
+                    startMappingActivity(defaultLid, lastApplication.aid);
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(this, "Unable to resume: " + e.getMessage(), Toast.LENGTH_LONG).show());
@@ -126,7 +126,7 @@ public class HomeActivity extends BaseActivity {
                 int defaultLid = getOrCreateDefaultLocationId(db);
                 String configJSON = "{}";
                 long newAid = db.applicationsDao().insert(new Applications(defaultLid, new Date(), "", configJSON));
-                runOnUiThread(() -> startMainActivity(defaultLid, (int) newAid));
+                runOnUiThread(() -> startMappingActivity(defaultLid, (int) newAid));
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(this, "Unable to create application: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
@@ -142,11 +142,11 @@ public class HomeActivity extends BaseActivity {
         return (int) newLid;
     }
 
-    private void startMainActivity(int locationId, int applicationId) {
-        Intent intent = new Intent(HomeActivity.this, MainActivity.class);
+    private void startMappingActivity(int locationId, int applicationId) {
+        Class<?> mappingActivity = USE_OPENGL_SIMPLIFIED_MAPPING ? GLMapActivity.class : MainActivity.class;
+        Intent intent = new Intent(HomeActivity.this, mappingActivity);
         intent.putExtra("lid", String.valueOf(locationId));
         intent.putExtra("aid", String.valueOf(applicationId));
         startActivity(intent);
-    
     }
 }

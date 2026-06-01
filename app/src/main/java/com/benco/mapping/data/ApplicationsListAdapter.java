@@ -1,6 +1,6 @@
 package com.benco.mapping.data;
+
 import android.content.Intent;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,9 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.benco.mapping.ApplicationsActivity;
 import com.benco.mapping.GLMapActivity;
-import com.benco.mapping.HomeActivity;
 import com.benco.mapping.MainActivity;
 import com.benco.mapping.R;
 
@@ -22,9 +20,23 @@ import java.util.Date;
 
 public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsListAdapter.ApplicationsViewHolder> {
     ArrayList<Applications> applicationsArrayList;
+    private final OnApplicationDeleteListener onApplicationDeleteListener;
+    private final OnApplicationExportListener onApplicationExportListener;
 
-    public ApplicationsListAdapter(ArrayList<Applications> applications) {
+    public interface OnApplicationDeleteListener {
+        void onDeleteRequested(Applications application);
+    }
+
+    public interface OnApplicationExportListener {
+        void onExportRequested(Applications application);
+    }
+
+    public ApplicationsListAdapter(ArrayList<Applications> applications,
+                                   OnApplicationDeleteListener onApplicationDeleteListener,
+                                   OnApplicationExportListener onApplicationExportListener) {
         this.applicationsArrayList = applications;
+        this.onApplicationDeleteListener = onApplicationDeleteListener;
+        this.onApplicationExportListener = onApplicationExportListener;
     }
 
     @NonNull
@@ -42,22 +54,24 @@ public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsLi
         String formattedDate = formatter.format(dateTime);
         holder.listApplicationName.setText(formattedDate);
         holder.listApplicationEditButton.setText("View");
-        holder.listApplicationEditButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Start Applications
-                Intent intent = new Intent(holder.itemView.getContext(), MainActivity.class);
-                intent.putExtra("aid", applicationsArrayList.get(holder.getAdapterPosition()).aid+""); // Pass the ID or any other data
-                holder.itemView.getContext().startActivity(intent);
+        holder.listApplicationEditButton.setOnClickListener(v -> {
+            Intent intent = new Intent(holder.itemView.getContext(), MainActivity.class);
+            intent.putExtra("aid", applicationsArrayList.get(holder.getAdapterPosition()).aid + "");
+            holder.itemView.getContext().startActivity(intent);
+        });
+        holder.listApplicationEditButton3d.setOnClickListener(v -> {
+            Intent intent = new Intent(holder.itemView.getContext(), GLMapActivity.class);
+            intent.putExtra("aid", applicationsArrayList.get(holder.getAdapterPosition()).aid + "");
+            holder.itemView.getContext().startActivity(intent);
+        });
+        holder.listApplicationDeleteButton.setOnClickListener(v -> {
+            if (onApplicationDeleteListener != null) {
+                onApplicationDeleteListener.onDeleteRequested(applicationsArrayList.get(holder.getAdapterPosition()));
             }
         });
-        holder.listApplicationEditButton3d.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Start Applications
-                Intent intent = new Intent(holder.itemView.getContext(), GLMapActivity.class);
-                intent.putExtra("aid", applicationsArrayList.get(holder.getAdapterPosition()).aid+""); // Pass the ID or any other data
-                holder.itemView.getContext().startActivity(intent);
+        holder.listApplicationExportButton.setOnClickListener(v -> {
+            if (onApplicationExportListener != null) {
+                onApplicationExportListener.onExportRequested(applicationsArrayList.get(holder.getAdapterPosition()));
             }
         });
     }
@@ -71,6 +85,8 @@ public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsLi
         TextView listApplicationName;
         Button listApplicationEditButton;
         Button listApplicationEditButton3d;
+        Button listApplicationDeleteButton;
+        Button listApplicationExportButton;
 
         public ApplicationsViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -81,7 +97,8 @@ public class ApplicationsListAdapter extends RecyclerView.Adapter<ApplicationsLi
             listApplicationName = itemView.findViewById(R.id.listApplicationName);
             listApplicationEditButton = itemView.findViewById(R.id.listApplicationEditButton);
             listApplicationEditButton3d = itemView.findViewById(R.id.listApplicationEditButton3d);
-
+            listApplicationDeleteButton = itemView.findViewById(R.id.listApplicationDeleteButton);
+            listApplicationExportButton = itemView.findViewById(R.id.listApplicationExportButton);
         }
     }
 }

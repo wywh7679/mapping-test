@@ -37,4 +37,12 @@ public class ApplicationsViewModel extends AndroidViewModel {
     public long insertApplications(Applications application) throws ExecutionException, InterruptedException {
         return applications.insertApplications(application);
     }
+
+    public void deleteApplicationById(int aid) {
+        applications.deleteApplicationById(aid);
+    }
+
+    public void deleteApplicationsByLid(int lid) {
+        applications.deleteApplicationsByLid(lid);
+    }
 }

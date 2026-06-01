@@ -12,6 +12,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -32,6 +33,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.List;
+import java.util.HashSet;
+import java.util.ArrayList;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -42,6 +47,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.ContextCompat;
 
 public class BaseActivity extends AppCompatActivity {
+    protected static final boolean USE_SIMPLIFIED_HOME = true;
+    private static final String SETTINGS_PROFILE_KEY = "activeSettingsProfile";
+    private static final String SETTINGS_PROFILE_LIST_KEY = "settingsProfiles";
+    private static final String DEFAULT_SETTINGS_PROFILE = "default";
     public SharedPreferences sharedPreferences;
     static HashMap<String, Object> settings = new HashMap<>();
     public ApplicationsDataViewModel AppDataVM;
@@ -61,6 +70,157 @@ public class BaseActivity extends AppCompatActivity {
     public TextView.OnFocusChangeListener settingsEditTextFocusListener;
     private static final int COLOR_PICKER_ROWS = 4;
     private static final int COLOR_PICKER_COLUMNS = 6;
+    protected String getActiveSettingsProfile() {
+        return sharedPreferences.getString(SETTINGS_PROFILE_KEY, DEFAULT_SETTINGS_PROFILE);
+    }
+
+    private String profileKey(String baseKey) {
+        String profile = getActiveSettingsProfile();
+        return "settingsProfile." + profile + "." + baseKey;
+    }
+
+    protected void saveSettingsProfileName(String profileName) {
+        String trimmed = profileName == null ? "" : profileName.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        Set<String> profiles = new HashSet<>(sharedPreferences.getStringSet(SETTINGS_PROFILE_LIST_KEY, new HashSet<>()));
+        profiles.add(DEFAULT_SETTINGS_PROFILE);
+        profiles.add(trimmed);
+        sharedPreferences.edit()
+                .putString(SETTINGS_PROFILE_KEY, trimmed)
+                .putStringSet(SETTINGS_PROFILE_LIST_KEY, profiles)
+                .apply();
+        settings.put("activeSettingsProfile", trimmed);
+    }
+
+    protected List<String> getSettingsProfiles() {
+        Set<String> profiles = new HashSet<>(sharedPreferences.getStringSet(SETTINGS_PROFILE_LIST_KEY, new HashSet<>()));
+        profiles.add(DEFAULT_SETTINGS_PROFILE);
+        List<String> out = new ArrayList<>(profiles);
+        out.sort(String::compareToIgnoreCase);
+        return out;
+    }
+
+
+    protected boolean removeSettingsProfile(String profileName) {
+        String trimmed = profileName == null ? "" : profileName.trim();
+        if (trimmed.isEmpty() || DEFAULT_SETTINGS_PROFILE.equalsIgnoreCase(trimmed)) {
+            return false;
+        }
+        Set<String> profiles = new HashSet<>(sharedPreferences.getStringSet(SETTINGS_PROFILE_LIST_KEY, new HashSet<>()));
+        if (!profiles.remove(trimmed)) {
+            return false;
+        }
+
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        Set<String> keys = sharedPreferences.getAll().keySet();
+        String prefix = "settingsProfile." + trimmed + ".";
+        for (String key : keys) {
+            if (key.startsWith(prefix)) {
+                editor.remove(key);
+            }
+        }
+        editor.putStringSet(SETTINGS_PROFILE_LIST_KEY, profiles);
+
+        String active = getActiveSettingsProfile();
+        if (trimmed.equals(active)) {
+            editor.putString(SETTINGS_PROFILE_KEY, DEFAULT_SETTINGS_PROFILE);
+            settings.put("activeSettingsProfile", DEFAULT_SETTINGS_PROFILE);
+        }
+        editor.apply();
+        return true;
+    }
+
+    protected boolean renameSettingsProfile(String oldName, String newName) {
+        String oldTrim = oldName == null ? "" : oldName.trim();
+        String newTrim = newName == null ? "" : newName.trim();
+        if (oldTrim.isEmpty() || newTrim.isEmpty() || DEFAULT_SETTINGS_PROFILE.equalsIgnoreCase(oldTrim)) {
+            return false;
+        }
+        if (oldTrim.equals(newTrim)) {
+            return true;
+        }
+
+        Set<String> profiles = new HashSet<>(sharedPreferences.getStringSet(SETTINGS_PROFILE_LIST_KEY, new HashSet<>()));
+        if (!profiles.contains(oldTrim)) {
+            return false;
+        }
+        profiles.remove(oldTrim);
+        profiles.add(newTrim);
+
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        String oldPrefix = "settingsProfile." + oldTrim + ".";
+        String newPrefix = "settingsProfile." + newTrim + ".";
+        for (String key : sharedPreferences.getAll().keySet()) {
+            if (key.startsWith(oldPrefix)) {
+                String suffix = key.substring(oldPrefix.length());
+                Object value = sharedPreferences.getAll().get(key);
+                if (value instanceof String) editor.putString(newPrefix + suffix, (String) value);
+                else if (value instanceof Boolean) editor.putBoolean(newPrefix + suffix, (Boolean) value);
+                else if (value instanceof Integer) editor.putInt(newPrefix + suffix, (Integer) value);
+                else if (value instanceof Float) editor.putFloat(newPrefix + suffix, (Float) value);
+                else if (value instanceof Long) editor.putLong(newPrefix + suffix, (Long) value);
+                editor.remove(key);
+            }
+        }
+        editor.putStringSet(SETTINGS_PROFILE_LIST_KEY, profiles);
+        if (oldTrim.equals(getActiveSettingsProfile())) {
+            editor.putString(SETTINGS_PROFILE_KEY, newTrim);
+            settings.put("activeSettingsProfile", newTrim);
+        }
+        editor.apply();
+        return true;
+    }
+    protected void putProfileString(String key, String value) {
+        sharedPreferences.edit().putString(profileKey(key), value).apply();
+        settings.put(key, value);
+    }
+
+    protected void putProfileBoolean(String key, boolean value) {
+        sharedPreferences.edit().putBoolean(profileKey(key), value).apply();
+        settings.put(key, value);
+    }
+
+    protected void putProfileInt(String key, int value) {
+        sharedPreferences.edit().putInt(profileKey(key), value).apply();
+        settings.put(key, value);
+    }
+
+    protected String getProfileString(String key, String fallback) {
+        String pKey = profileKey(key);
+        if (sharedPreferences.contains(pKey)) {
+            return sharedPreferences.getString(pKey, fallback);
+        }
+        return sharedPreferences.getString(key, fallback);
+    }
+
+    protected boolean getProfileBoolean(String key, boolean fallback) {
+        String pKey = profileKey(key);
+        if (sharedPreferences.contains(pKey)) {
+            return sharedPreferences.getBoolean(pKey, fallback);
+        }
+        return sharedPreferences.getBoolean(key, fallback);
+    }
+
+    protected int getProfileInt(String key, int fallback) {
+        String pKey = profileKey(key);
+        if (sharedPreferences.contains(pKey)) {
+            return sharedPreferences.getInt(pKey, fallback);
+        }
+        return sharedPreferences.getInt(key, fallback);
+    }
+
+    protected void dismissKeyboard(View view) {
+        if (view == null) {
+            return;
+        }
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -97,25 +257,57 @@ public class BaseActivity extends AppCompatActivity {
         colorMap.put(23, "#444444");
         // Retrieving the value using its keys the file name must be same in both saving and retrieving the data
         sharedPreferences = getSharedPreferences("ThemePreferences", Context.MODE_PRIVATE);
+        settings.put("activeSettingsProfile", getActiveSettingsProfile());
         // The value will be default as empty string because for the very first time when the app is opened, there is nothing to show
-        String AppTheme = sharedPreferences.getString("theme", "dark");
+        String AppTheme = getProfileString("theme", "dark");
+        settings.put("theme", AppTheme);
         if (AppTheme.equals("light")) {
             setTheme(R.style.AppTheme);
         } else {
             setTheme(R.style.AppThemeDark);
         }
-        int mainPathColor = sharedPreferences.getInt("mainPathColor", R.color.green);
+        String textScaleMultiplier = getProfileString("textScaleMultiplier", "1.0");
+        settings.put("textScaleMultiplier", textScaleMultiplier);
+        String unitSystem = getProfileString("unitSystem", "us");
+        settings.put("unitSystem", unitSystem);
+        boolean showGrid = getProfileBoolean("showGrid", true);
+        settings.put("showGrid", showGrid);
+        boolean showSolidBackground = getProfileBoolean("showSolidBackground", true);
+        settings.put("showSolidBackground", showSolidBackground);
+        boolean showABLines = getProfileBoolean("showABLines", true);
+        settings.put("showABLines", showABLines);
+        boolean showSteeringLines = getProfileBoolean("showSteeringLines", true);
+        settings.put("showSteeringLines", showSteeringLines);
+        boolean showFieldBoundaries = getProfileBoolean("showFieldBoundaries", true);
+        settings.put("showFieldBoundaries", showFieldBoundaries);
+        boolean showBasemap = getProfileBoolean("showBasemap", false);
+        settings.put("showBasemap", showBasemap);
+        String basemapOpacity = getProfileString("basemapOpacity", "0.55");
+        settings.put("basemapOpacity", basemapOpacity);
+
+        int gridColor = getProfileInt("gridColor", Color.parseColor("#C0780000"));
+        settings.put("gridColor", gridColor);
+        int backgroundColor = getProfileInt("backgroundColor", Color.parseColor("#C71F1F1F"));
+        settings.put("backgroundColor", backgroundColor);
+        int abLineColor = getProfileInt("abLineColor", Color.parseColor("#FF00FF00"));
+        settings.put("abLineColor", abLineColor);
+        int steeringLineColor = getProfileInt("steeringLineColor", Color.parseColor("#FF0000FF"));
+        settings.put("steeringLineColor", steeringLineColor);
+        int fieldBoundaryColor = getProfileInt("fieldBoundaryColor", Color.parseColor("#FFFFFF00"));
+        settings.put("fieldBoundaryColor", fieldBoundaryColor);
+
+        int mainPathColor = getProfileInt("mainPathColor", R.color.green);
         //Log.d(TAG, "mainPathColor: "+mainPathColor);
         settings.put("mainPathColor", mainPathColor);
-        int thickPathColor = sharedPreferences.getInt("thickPathColor", R.color.red);
+        int thickPathColor = getProfileInt("thickPathColor", R.color.red);
         settings.put("thickPathColor", thickPathColor);
-        String thickPathStroke = sharedPreferences.getString("thickPathStroke", "120");
+        String thickPathStroke = getProfileString("thickPathStroke", "120");
         settings.put("thickPathStroke", thickPathStroke);
-        String totalNumberSections = sharedPreferences.getString("totalNumberSections", "1");
+        String totalNumberSections = getProfileString("totalNumberSections", "1");
         settings.put("totalNumberSections", totalNumberSections);
         Integer sectionTotal = Integer.parseInt(totalNumberSections);
         for(Integer i = 1; i <= sectionTotal; i++) {
-            String width = sharedPreferences.getString("section"+i+"Width", "30");
+            String width = getProfileString("section"+i+"Width", "30");
             settings.put("section"+i+"Width", width);
 
             String colorString = colorMap.get(i-1).replace("#", "#FF");
@@ -123,9 +315,9 @@ public class BaseActivity extends AppCompatActivity {
             int colorInt = Color.parseColor(colorString);
             int alphaColorInt = Color.parseColor(alphaColorString);
 
-            int sectionPathColor = sharedPreferences.getInt("section"+i+"PathColor", colorInt);
+            int sectionPathColor = getProfileInt("section"+i+"PathColor", colorInt);
             settings.put("section"+i+"PathColor", sectionPathColor);
-            int sectionThickPathColor = sharedPreferences.getInt("section"+i+"ThickPathColor", alphaColorInt);
+            int sectionThickPathColor = getProfileInt("section"+i+"ThickPathColor", alphaColorInt);
             settings.put("section"+i+"ThickPathColor", sectionThickPathColor);
 
         }
@@ -133,8 +325,8 @@ public class BaseActivity extends AppCompatActivity {
         settingsEditTextListener = new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE ||
-                        (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO || actionId == EditorInfo.IME_ACTION_SEND ||
+                        (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
                     String inputText = v.getText().toString();
                     String prefKey = "";
                     if (v.getTag() != null) {
@@ -157,10 +349,9 @@ public class BaseActivity extends AppCompatActivity {
                        // Log.d("TagCheck", "Tag is null.");
                     }
                     Log.d("oneditoraction", prefKey);
-                    SharedPreferences.Editor editor = sharedPreferences.edit();
-                    editor.putString(prefKey, inputText); // Store an integer
-                    editor.apply(); // or editor.commit();
-                    settings.put(prefKey, inputText);
+                    putProfileString(prefKey, inputText);
+                    dismissKeyboard(v);
+                    v.clearFocus();
                     return true; // Consume the event
                 }
                 return false;
@@ -192,10 +383,7 @@ public class BaseActivity extends AppCompatActivity {
                         // The tag is null
                         Log.d("TagCheck", "Tag is null.");
                     }
-                    SharedPreferences.Editor editor = sharedPreferences.edit();
-                    editor.putString(prefKey, inputText); // Store an integer
-                    editor.apply(); // or editor.commit();
-                    settings.put(prefKey, inputText);
+                    putProfileString(prefKey, inputText);
                 }else{
                    // Toast.makeText(this, "Get Focus", Toast.LENGTH_SHORT).show();
                 }
@@ -302,10 +490,7 @@ public class BaseActivity extends AppCompatActivity {
                     public void onClick(View b) {
                         int color = (withAlpha)?alphaColorInt:colorInt;
                         Log.d(TAG, "color: "+color);
-                        SharedPreferences.Editor editor = sharedPreferences.edit();
-                        editor.putInt(preferenceKey, color); // Store an integer
-                        editor.apply(); // or editor.commit();
-                        settings.put(preferenceKey, color);
+                        putProfileInt(preferenceKey, color);
                         v.setBackgroundColor(color);
                         dialog.dismiss();
                     }
@@ -482,10 +667,7 @@ public class BaseActivity extends AppCompatActivity {
                     public void onClick(View b) {
                         int color = (withAlpha)?alphaColorInt:colorInt;
                         Log.d(TAG, "color: "+color);
-                        SharedPreferences.Editor editor = sharedPreferences.edit();
-                        editor.putInt(preferenceKey, color); // Store an integer
-                        editor.apply(); // or editor.commit();
-                        settings.put(preferenceKey, color);
+                        putProfileInt(preferenceKey, color);
                         v.setBackgroundColor(color);
                         dialog.dismiss();
                     }
@@ -534,10 +716,7 @@ public class BaseActivity extends AppCompatActivity {
             int color = (withAlpha)?R.color.redA:R.color.red;
 
             Log.d(TAG, "color: "+color);
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -545,10 +724,7 @@ public class BaseActivity extends AppCompatActivity {
         greenButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.greenA:R.color.green;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -556,10 +732,7 @@ public class BaseActivity extends AppCompatActivity {
         blueButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.blueA:R.color.blue;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -568,10 +741,7 @@ public class BaseActivity extends AppCompatActivity {
         yellowButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.yellowA:R.color.yellow;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -580,10 +750,7 @@ public class BaseActivity extends AppCompatActivity {
         orangeButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.orangeA:R.color.orange;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -592,10 +759,7 @@ public class BaseActivity extends AppCompatActivity {
         limeButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.limeA:R.color.lime;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -604,10 +768,7 @@ public class BaseActivity extends AppCompatActivity {
         aquaButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.aquaA:R.color.aqua;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -616,10 +777,7 @@ public class BaseActivity extends AppCompatActivity {
         purpleButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.purpleA:R.color.purple;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -627,10 +785,7 @@ public class BaseActivity extends AppCompatActivity {
         whiteButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.whiteA:R.color.white;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -638,10 +793,7 @@ public class BaseActivity extends AppCompatActivity {
         lightGrayButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.lightGrayA:R.color.lightGray;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -650,10 +802,7 @@ public class BaseActivity extends AppCompatActivity {
         grayButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.grayA:R.color.gray;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });
@@ -662,10 +811,7 @@ public class BaseActivity extends AppCompatActivity {
         blackButton.setOnClickListener(view -> {
             // Handle red color selection
             int color = (withAlpha)?R.color.blackA:R.color.black;
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(preferenceKey, color); // Store an integer
-            editor.apply(); // or editor.commit();
-            settings.put(preferenceKey, color);
+            putProfileInt(preferenceKey, color);
             v.setBackgroundColor(ContextCompat.getColor(this, color));
             dialog.dismiss();
         });

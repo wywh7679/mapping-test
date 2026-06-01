@@ -29,4 +29,16 @@ public class LocationsViewModel extends AndroidViewModel {
     public long insertLocations(Locations locations) throws ExecutionException, InterruptedException {
         return locationsRepository.insertLocations(locations);
     }
+
+    public void updateLocation(Locations location) {
+        locationsRepository.updateLocation(location);
+    }
+
+    public Locations getLocationByIdSync(int lid) {
+        return locationsRepository.getLocationByIdSync(lid);
+    }
+
+    public void deleteLocationById(int lid) {
+        locationsRepository.deleteLocationById(lid);
+    }
 }

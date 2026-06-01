@@ -54,6 +54,8 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private final List<Integer> guideLineCounts = new ArrayList<>();
     private final List<StripLine> leftLines = new ArrayList<>();
     private final List<StripLine> rightLines = new ArrayList<>();
+    private final List<FloatBuffer> fieldBoundaryBuffers = new ArrayList<>();
+    private final List<Integer> fieldBoundaryCounts = new ArrayList<>();
     private int mainPathCount;
     private int leftPathCount;
     private int rightPathCount;
@@ -65,6 +67,12 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private final float[] abLineColor = new float[]{0f, 1f, 0f, 1f};
     private final float[] guideLineColor = new float[]{1f, 1f, 1f, 1f};
     private final float[] steeringLineColor = new float[]{0f, 0f, 1f, 1f};
+    private final float[] fieldBoundaryColor = new float[]{1f, 1f, 0f, 1f};
+    private boolean showGrid = true;
+    private boolean showSolidBackground = true;
+    private boolean showABLines = true;
+    private boolean showSteeringLines = true;
+    private boolean showFieldBoundaries = true;
     private float mainPathHalfWidth = 1.0f;
     private int texturedProgram;
     private int mainLineTextureId;
@@ -89,6 +97,13 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
     private int fullscreenProgram;
     private FloatBuffer fullscreenVertexBuffer;
     private FloatBuffer fullscreenUvBuffer;
+    private FloatBuffer basemapVertexBuffer;
+    private FloatBuffer basemapTexCoordBuffer;
+    private FloatBuffer basemapColorBuffer;
+    private float basemapWorldSize = 200000f;
+    private int basemapTextureId;
+    private boolean showBasemap = false;
+    private float basemapAlpha = 0.5f;
 
     int parsedFillColor = Color.parseColor("#121314");
     float fillRed = Color.red(parsedFillColor)/255f;
@@ -375,6 +390,8 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 .asFloatBuffer();
         fullscreenUvBuffer.put(quadUvs).position(0);
 
+        rebuildBasemapQuad();
+
         // Compile fullscreen shader program
         fullscreenProgram = createProgram(
                 loadShaderSource(R.raw.fullscreen_quad_vertex),
@@ -394,17 +411,19 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl) {
+        float[] updatedView = updateViewMatrix();
+        System.arraycopy(updatedView, 0, viewMatrix, 0, 16);
+
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
         // Draw lines with blending (disable depth if needed)
         GLES20.glEnable(GLES20.GL_BLEND);
         //GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        drawBasemap();
         drawGrid();
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         drawPathLines();
-        float[] updatedView = updateViewMatrix();
-        System.arraycopy(updatedView, 0, viewMatrix, 0, 16);
     }
 
     public void captureInitialCamera() {
@@ -456,6 +475,9 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         gridAzimuth = degrees;
     }
     private void drawGrid() {
+        if (!showGrid && !showSolidBackground) {
+            return;
+        }
         GLES20.glUseProgram(program);
 
         int colorHandle = GLES20.glGetUniformLocation(program, "u_Color");
@@ -489,7 +511,7 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, modelViewProjectionMatrix, 0);
 
         // Draw the grid background
-        if (gridBackgroundBuffer != null) {
+        if (showSolidBackground && gridBackgroundBuffer != null) {
             gridBackgroundBuffer.position(0);
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, gridBackgroundBuffer);
             GLES20.glEnableVertexAttribArray(positionHandle);
@@ -499,11 +521,13 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         }
 
         // Draw the grid lines
-        gridVertexBuffer.position(0);
-        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, gridVertexBuffer);
-        GLES20.glEnableVertexAttribArray(positionHandle);
-        GLES20.glUniform4f(colorHandle, gridRed, gridGreen, gridBlue, gridAlpha);
-        GLES20.glDrawArrays(GLES20.GL_LINES, 0, gridVertexBuffer.capacity()/COORDS_PER_VERTEX); // Adjust based on vertex count
+        if (showGrid) {
+            gridVertexBuffer.position(0);
+            GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, gridVertexBuffer);
+            GLES20.glEnableVertexAttribArray(positionHandle);
+            GLES20.glUniform4f(colorHandle, gridRed, gridGreen, gridBlue, gridAlpha);
+            GLES20.glDrawArrays(GLES20.GL_LINES, 0, gridVertexBuffer.capacity()/COORDS_PER_VERTEX); // Adjust based on vertex count
+        }
 
         GLES20.glDisableVertexAttribArray(positionHandle);
     }
@@ -524,19 +548,21 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
         if (useFrameBuffer) {
             renderLineBufferToFbo(mainPathBuffer, mainPathCount, mainPathColor, mainPathFbo);
-            if (steeringLineBuffer != null && steeringLineCount > 0) {
+            if (showSteeringLines && steeringLineBuffer != null && steeringLineCount > 0) {
                 renderLineBufferToFbo(steeringLineBuffer, steeringLineCount, steeringLineColor, steeringLineFbo);
             }
-            if (!guideLineBuffers.isEmpty()) {
+            if (showABLines && !guideLineBuffers.isEmpty()) {
                 renderGuideLinesToFbo(guideLinesFbo, guideLineColor);
             }
-            renderLineBufferToFbo(abLineBuffer, abLineCount, abLineColor, abLineFbo);
+            if (showABLines) {
+                renderLineBufferToFbo(abLineBuffer, abLineCount, abLineColor, abLineFbo);
+            }
         } else {
             drawLineStrip(mainPathBuffer, mainPathCount, positionHandle, colorHandle, mainPathColor);
-            if (steeringLineBuffer != null && steeringLineCount > 0) {
+            if (showSteeringLines && steeringLineBuffer != null && steeringLineCount > 0) {
                 drawLineStrip(steeringLineBuffer, steeringLineCount, positionHandle, colorHandle, steeringLineColor);
             }
-            if (!guideLineBuffers.isEmpty()) {
+            if (showABLines && !guideLineBuffers.isEmpty()) {
                 for (int i = 0; i < guideLineBuffers.size(); i++) {
                     FloatBuffer buffer = guideLineBuffers.get(i);
                     int count = guideLineCounts.get(i);
@@ -595,17 +621,17 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
 
 
             for (int i = 0; i < lineIndex; i++) {
-                drawFullscreenTexture(lineTextures[i]);
+                drawFullscreenTexture(lineTextures[i], 1.0f, fullscreenUvBuffer);
             }
-            drawFullscreenTexture(mainPathTexture);
-            if (steeringLineTexture != 0) {
-                drawFullscreenTexture(steeringLineTexture);
+            drawFullscreenTexture(mainPathTexture, 1.0f, fullscreenUvBuffer);
+            if (showSteeringLines && steeringLineTexture != 0) {
+                drawFullscreenTexture(steeringLineTexture, 1.0f, fullscreenUvBuffer);
             }
-            if (guideLinesTexture != 0) {
-                drawFullscreenTexture(guideLinesTexture);
+            if (showABLines && guideLinesTexture != 0) {
+                drawFullscreenTexture(guideLinesTexture, 1.0f, fullscreenUvBuffer);
             }
-            if (abLineTexture != 0) {
-                drawFullscreenTexture(abLineTexture);
+            if (showABLines && abLineTexture != 0) {
+                drawFullscreenTexture(abLineTexture, 1.0f, fullscreenUvBuffer);
             }
         } else {
             for (StripLine line : listCopyLeft) {
@@ -617,25 +643,115 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
                 // line.drawTriangleStrip(texturedProgram, projectionMatrix, viewMatrix);
             }
         }
+
+        if (showFieldBoundaries && !fieldBoundaryBuffers.isEmpty()) {
+            for (int i = 0; i < fieldBoundaryBuffers.size(); i++) {
+                FloatBuffer buffer = fieldBoundaryBuffers.get(i);
+                int count = fieldBoundaryCounts.get(i);
+                if (buffer != null && count > 1) {
+                    drawLineStrip(buffer, count, positionHandle, colorHandle, fieldBoundaryColor);
+                }
+            }
+        }
         GLES20.glDisableVertexAttribArray(positionHandle);
     }
-    private void drawFullscreenTexture(int textureId) {
+
+    private void drawBasemap() {
+        if (!showBasemap || basemapTextureId == 0 || basemapVertexBuffer == null || basemapTexCoordBuffer == null || basemapColorBuffer == null) {
+            return;
+        }
+
+        GLES20.glUseProgram(texturedProgram);
+
+        int positionHandle = glGetAttribLocation(texturedProgram, "a_Position");
+        int texCoordHandle = glGetAttribLocation(texturedProgram, "a_TexCoord");
+        int colorHandle = glGetAttribLocation(texturedProgram, "a_Color");
+        int textureHandle = GLES20.glGetUniformLocation(texturedProgram, "u_Texture");
+        int mvpMatrixHandle = GLES20.glGetUniformLocation(texturedProgram, "u_ModelViewProjectionMatrix");
+
+        float snappedX = Math.round(vehicleX / gridStep) * gridStep;
+        float snappedZ = Math.round(vehicleZ / gridStep) * gridStep;
+        Matrix.setIdentityM(gridModelMatrix, 0);
+        Matrix.rotateM(gridModelMatrix, 0, -gridAzimuth, 0f, 1f, 0f);
+        Matrix.translateM(gridModelMatrix, 0, snappedX, 0f, snappedZ);
+
+        final float[] temp = new float[16];
+        Matrix.multiplyMM(temp, 0, viewMatrix, 0, gridModelMatrix, 0);
+        Matrix.multiplyMM(modelViewProjectionMatrix, 0, projectionMatrix, 0, temp, 0);
+        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, modelViewProjectionMatrix, 0);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, basemapTextureId);
+        GLES20.glUniform1i(textureHandle, 0);
+
+        basemapVertexBuffer.position(0);
+        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, basemapVertexBuffer);
+        GLES20.glEnableVertexAttribArray(positionHandle);
+
+        basemapTexCoordBuffer.position(0);
+        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 0, basemapTexCoordBuffer);
+        GLES20.glEnableVertexAttribArray(texCoordHandle);
+
+        basemapColorBuffer.position(0);
+        GLES20.glVertexAttribPointer(colorHandle, 4, GLES20.GL_FLOAT, false, 0, basemapColorBuffer);
+        GLES20.glEnableVertexAttribArray(colorHandle);
+
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+
+        GLES20.glDisableVertexAttribArray(positionHandle);
+        GLES20.glDisableVertexAttribArray(texCoordHandle);
+        GLES20.glDisableVertexAttribArray(colorHandle);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+    }
+    private void rebuildBasemapQuad() {
+        float half = basemapWorldSize * 0.5f;
+        float y = -0.02f;
+        float[] vertices = new float[]{
+                -half, y, -half,
+                 half, y, -half,
+                -half, y,  half,
+                 half, y,  half
+        };
+        float[] uvs = new float[]{
+                0f, 1f,
+                1f, 1f,
+                0f, 0f,
+                1f, 0f
+        };
+        basemapVertexBuffer = buildFloatBuffer(vertices);
+        basemapTexCoordBuffer = buildFloatBuffer(uvs);
+        rebuildBasemapColorBuffer();
+    }
+
+    private void rebuildBasemapColorBuffer() {
+        float[] colors = new float[]{
+                1f, 1f, 1f, basemapAlpha,
+                1f, 1f, 1f, basemapAlpha,
+                1f, 1f, 1f, basemapAlpha,
+                1f, 1f, 1f, basemapAlpha
+        };
+        basemapColorBuffer = buildFloatBuffer(colors);
+    }
+
+    private void drawFullscreenTexture(int textureId, float alpha, FloatBuffer uvBuffer) {
         GLES20.glUseProgram(fullscreenProgram);
 
         int positionHandle = glGetAttribLocation(fullscreenProgram, "a_Position");
         int texCoordHandle = glGetAttribLocation(fullscreenProgram, "a_TexCoord");
         int textureHandle = GLES20.glGetUniformLocation(fullscreenProgram, "u_Texture");
+        int alphaHandle = GLES20.glGetUniformLocation(fullscreenProgram, "u_Alpha");
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
         GLES20.glUniform1i(textureHandle, 0);
+        GLES20.glUniform1f(alphaHandle, alpha);
 
         fullscreenVertexBuffer.position(0);
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, fullscreenVertexBuffer);
         GLES20.glEnableVertexAttribArray(positionHandle);
 
-        fullscreenUvBuffer.position(0);
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 0, fullscreenUvBuffer);
+        uvBuffer.position(0);
+        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 0, uvBuffer);
         GLES20.glEnableVertexAttribArray(texCoordHandle);
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
@@ -847,6 +963,72 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
         }
     }
 
+    public void setDisplayToggles(boolean showGrid, boolean showSolidBackground, boolean showABLines, boolean showSteeringLines) {
+        this.showGrid = showGrid;
+        this.showSolidBackground = showSolidBackground;
+        this.showABLines = showABLines;
+        this.showSteeringLines = showSteeringLines;
+    }
+
+    public void setGridColor(int colorInt) {
+        setColorFromIntWithAlpha(colorInt, true, false);
+    }
+
+    public void setGridBackgroundColor(int colorInt) {
+        setColorFromIntWithAlpha(colorInt, false, true);
+    }
+
+    public void setAbLineColor(int colorInt) {
+        setColor(abLineColor, colorInt);
+        setColor(guideLineColor, colorInt);
+    }
+
+    public void setSteeringLineColor(int colorInt) {
+        setColor(steeringLineColor, colorInt);
+    }
+
+    public void setFieldBoundaryDisplay(boolean showFieldBoundaries) {
+        this.showFieldBoundaries = showFieldBoundaries;
+    }
+
+    public void setFieldBoundaryColor(int colorInt) {
+        setColor(fieldBoundaryColor, colorInt);
+    }
+
+    public void setFieldBoundaryGeometry(List<float[]> boundaryStrips) {
+        fieldBoundaryBuffers.clear();
+        fieldBoundaryCounts.clear();
+        if (boundaryStrips == null) {
+            return;
+        }
+        for (float[] strip : boundaryStrips) {
+            FloatBuffer buffer = buildFloatBuffer(strip);
+            if (buffer != null && strip.length >= COORDS_PER_VERTEX * 2) {
+                fieldBoundaryBuffers.add(buffer);
+                fieldBoundaryCounts.add(strip.length / COORDS_PER_VERTEX);
+            }
+        }
+    }
+
+    private void setColorFromIntWithAlpha(int colorInt, boolean forGrid, boolean forBackground) {
+        float red = Color.red(colorInt) / 255f;
+        float green = Color.green(colorInt) / 255f;
+        float blue = Color.blue(colorInt) / 255f;
+        float alpha = Color.alpha(colorInt) / 255f;
+        if (forGrid) {
+            gridRed = red;
+            gridGreen = green;
+            gridBlue = blue;
+            gridAlpha = alpha;
+        }
+        if (forBackground) {
+            gridBackgroundRed = red;
+            gridBackgroundGreen = green;
+            gridBackgroundBlue = blue;
+            gridBackgroundAlpha = alpha;
+        }
+    }
+
     private void setColor(float[] outColor, int colorInt) {
         outColor[0] = Color.red(colorInt) / 255f;
         outColor[1] = Color.green(colorInt) / 255f;
@@ -878,8 +1060,10 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
             float y = lineVertices[idx + 1];
             float z = lineVertices[idx + 2];
 
-            vehicleX = x;
-            vehicleZ = y;
+            if (i == pointCount - 1) {
+                vehicleX = x;
+                vehicleZ = z;
+            }
 
             float dirX;
             float dirZ;
@@ -956,6 +1140,44 @@ public class MyRenderer implements MyGLSurfaceView.Renderer {
             out[i] = uvs.get(i);
         }
         return out;
+    }
+
+    private int createBitmapTexture(Bitmap bitmap) {
+        int[] textures = new int[1];
+        GLES20.glGenTextures(1, textures, 0);
+        int textureId = textures[0];
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+        return textureId;
+    }
+
+    public void setBasemapBitmap(Bitmap bitmap) {
+        if (bitmap == null) {
+            showBasemap = false;
+            return;
+        }
+        if (basemapTextureId != 0) {
+            int[] textures = new int[]{basemapTextureId};
+            GLES20.glDeleteTextures(1, textures, 0);
+            basemapTextureId = 0;
+        }
+        basemapTextureId = createBitmapTexture(bitmap);
+    }
+
+    public void setBasemapDisplay(boolean show, float alpha) {
+        this.showBasemap = show;
+        this.basemapAlpha = Math.max(0.05f, Math.min(alpha, 1.0f));
+        rebuildBasemapColorBuffer();
+    }
+
+    public void setBasemapWorldSize(float worldSize) {
+        this.basemapWorldSize = Math.max(1000f, worldSize);
+        rebuildBasemapQuad();
     }
 
     private int createSolidTexture(int color) {

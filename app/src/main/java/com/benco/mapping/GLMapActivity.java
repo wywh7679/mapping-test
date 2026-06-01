@@ -9,6 +9,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Canvas;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import android.graphics.BitmapFactory;
+import android.graphics.Bitmap;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -56,6 +62,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.benco.mapping.data.Applications;
 import com.benco.mapping.data.ApplicationsData;
+import com.benco.mapping.data.Locations;
 import com.benco.mapping.data.LocationsDao;
 import com.benco.mapping.data.LocationsRoomDatabase;
 import com.benco.mapping.domain.ApplicationsDataViewModel;
@@ -332,6 +339,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         speedLabel = findViewById(R.id.speedLabel);
         headingLabel = findViewById(R.id.headingLabel);
         distanceLabel = findViewById(R.id.distanceLabel);
+        applyDisplaySettings();
         zoomSeekBar = findViewById(R.id.zoomSeekBar);
         zoomSeekBar.incrementProgressBy(10);
         ImageView homeBtn = findViewById(R.id.homeBtn);
@@ -444,7 +452,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                 appData.bLine = bLine;
                 appData.timestamp = location.getTime();
                 AppDataVM.insertApplications(appData);
-                speedLabel.setText(Math.round(currentSpeed)+"");
+                speedLabel.setText(formatSpeed(currentSpeed));
                 headingLabel.setText(Math.round(location.getBearing())+"");
                 compass.setRotation(location.getBearing());
                 // Toast.makeText(MainActivity.getAppContext(), "Location Changed " + lat + " " + lng + " " + currentSpeed+" "+azimuth, Toast.LENGTH_SHORT).show();
@@ -607,6 +615,26 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             int thickColor = parseConfigInt(currentConfigJson, "thickPathColor", Color.RED);
             int thickWidth = parseConfigInt(currentConfigJson, "thickPathStroke", 120);
             renderer.setPathWidths(thickWidth, thickColor);
+
+            boolean showGrid = parseSettingBoolean("showGrid", true);
+            boolean showSolidBackground = parseSettingBoolean("showSolidBackground", true);
+            boolean showABLines = parseSettingBoolean("showABLines", true);
+            boolean showSteeringLines = parseSettingBoolean("showSteeringLines", true);
+            renderer.setDisplayToggles(showGrid, showSolidBackground, showABLines, showSteeringLines);
+            renderer.setGridColor(parseSettingColor("gridColor", Color.parseColor("#C0780000")));
+            renderer.setGridBackgroundColor(parseSettingColor("backgroundColor", Color.parseColor("#C71F1F1F")));
+            renderer.setAbLineColor(parseSettingColor("abLineColor", Color.GREEN));
+            renderer.setSteeringLineColor(parseSettingColor("steeringLineColor", Color.BLUE));
+            renderer.setFieldBoundaryDisplay(parseSettingBoolean("showFieldBoundaries", true));
+            renderer.setFieldBoundaryColor(parseSettingColor("fieldBoundaryColor", Color.YELLOW));
+            renderer.setFieldBoundaryGeometry(buildFieldBoundaryGeometry(applications));
+            boolean showBasemap = parseSettingBoolean("showBasemap", false);
+            float basemapOpacity = parseSettingFloat("basemapOpacity", 0.55f);
+            glSurfaceView.queueEvent(() -> renderer.setBasemapDisplay(showBasemap, basemapOpacity));
+            glSurfaceView.requestRender();
+            if (showBasemap) {
+                loadOpenFreeMapBackground(applications);
+            }
         });
         AppVM.getAllApplicationsByLid(lid).observe(this, applications -> {
             for (Applications application : applications) {
@@ -658,10 +686,20 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             bearing = absPoints.get(i).bearing;
         }
         String distanceText;
-        if (distance/12 < 1320) {
-            distanceText = round(distance / 12, 2)+" ft";
+        boolean useMetric = isMetricUnits();
+        if (useMetric) {
+            double meters = distance * 0.0254;
+            if (meters < 1000) {
+                distanceText = round(meters, 2) + " m";
+            } else {
+                distanceText = round(meters / 1000, 2) + " km";
+            }
         } else {
-            distanceText = round(distance / 12 / 5280, 2)+" mi";
+            if (distance/12 < 1320) {
+                distanceText = round(distance / 12, 2)+" ft";
+            } else {
+                distanceText = round(distance / 12 / 5280, 2)+" mi";
+            }
         }
         distanceLabel.setText(distanceText);
         headingLabel.setText(Math.round(bearing)+"");
@@ -669,6 +707,308 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
     public void setValue(String value) { aidText.setValue(value); applicationIdEditText.setText(value); }
     public static LiveData<String> getText() {
         return aidText;
+    }
+
+    private void applyDisplaySettings() {
+        float multiplier = parseSettingFloat("textScaleMultiplier", 1.0f);
+        applyTextSizeMultiplier(multiplier);
+        speedLabel.setText(formatSpeed(0f));
+    }
+
+    private void applyTextSizeMultiplier(float multiplier) {
+        float safeMultiplier = Math.max(0.7f, Math.min(multiplier, 2.0f));
+        List<TextView> labels = new ArrayList<>();
+        labels.add(gridSizeLabel);
+        labels.add(speedLabel);
+        labels.add(headingLabel);
+        labels.add(distanceLabel);
+        for (TextView label : labels) {
+            if (label != null) {
+                label.setTextSize(12f * safeMultiplier);
+            }
+        }
+    }
+
+    private String formatSpeed(double speedMph) {
+        if (isMetricUnits()) {
+            double speedKmh = speedMph * 1.60934;
+            return Math.round(speedKmh) + " km/h";
+        }
+        return Math.round(speedMph) + " mph";
+    }
+
+    private boolean isMetricUnits() {
+        Object value = settings.get("unitSystem");
+        return value != null && "metric".equalsIgnoreCase(value.toString());
+    }
+
+    private float parseSettingFloat(String key, float fallback) {
+        Object value = settings.get(key);
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Float.parseFloat(value.toString());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private boolean parseSettingBoolean(String key, boolean fallback) {
+        Object value = settings.get(key);
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return Boolean.parseBoolean(value.toString());
+    }
+
+    private int parseSettingColor(String key, int fallback) {
+        Object value = settings.get(key);
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private List<float[]> buildFieldBoundaryGeometry(List<ApplicationsData> applications) {
+        if (applications == null || applications.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            Locations location = locationsDao.getLocationByIdSync(lid);
+            if (location == null || location.config == null || location.config.isEmpty()) {
+                return new ArrayList<>();
+            }
+            JSONObject config = new JSONObject(location.config);
+            if (!config.has("boundaryFilePath")) {
+                return new ArrayList<>();
+            }
+            String boundaryFilePath = config.getString("boundaryFilePath");
+            java.io.File shpFile = new java.io.File(boundaryFilePath);
+            if (!shpFile.exists()) {
+                return new ArrayList<>();
+            }
+
+            ApplicationsData last = applications.get(applications.size() - 1);
+            double centerLat = last.lat;
+            double centerLng = last.lng;
+
+            float minX = Float.MAX_VALUE;
+            float minY = Float.MAX_VALUE;
+            for (ApplicationsData appData : applications) {
+                if (appData.speed == 0 || appData.lat == 0 || appData.lng == 0) {
+                    continue;
+                }
+                float[] xy = toXY(centerLat, centerLng, appData.lat, appData.lng, 0.0254f);
+                minX = Math.min(minX, xy[0]);
+                minY = Math.min(minY, xy[1]);
+            }
+            float xOffset = minX < 0 ? Math.abs(minX) : -minX;
+            float yOffset = minY < 0 ? Math.abs(minY) : -minY;
+
+            java.io.FileInputStream fis = new java.io.FileInputStream(shpFile);
+            List<List<double[]>> parts = ShapefileBoundaryReader.readBoundaryParts(fis, false);
+            fis.close();
+
+            List<float[]> strips = new ArrayList<>();
+            for (List<double[]> part : parts) {
+                if (part.size() < 2) {
+                    continue;
+                }
+                boolean closed = Math.abs(part.get(0)[0] - part.get(part.size()-1)[0]) < 1e-10 &&
+                        Math.abs(part.get(0)[1] - part.get(part.size()-1)[1]) < 1e-10;
+                int extra = closed ? 0 : 1;
+                float[] strip = new float[(part.size() + extra) * 3];
+                int idx = 0;
+                for (double[] lngLat : part) {
+                    float[] xy = toXY(centerLat, centerLng, lngLat[1], lngLat[0], 0.0254f);
+                    strip[idx++] = xy[0] + xOffset;
+                    strip[idx++] = 0f;
+                    strip[idx++] = xy[1] + yOffset;
+                }
+                if (!closed) {
+                    float[] xy = toXY(centerLat, centerLng, part.get(0)[1], part.get(0)[0], 0.0254f);
+                    strip[idx++] = xy[0] + xOffset;
+                    strip[idx++] = 0f;
+                    strip[idx] = xy[1] + yOffset;
+                }
+                strips.add(strip);
+            }
+            return strips;
+        } catch (Exception e) {
+            Log.e(TAG, "Boundary load failed", e);
+            return new ArrayList<>();
+        }
+    }
+
+    private float[] toXY(double centerLatitude, double centerLongitude, double latitude, double longitude, double metersPerPixel) {
+        double rto = 1 / metersPerPixel;
+        double dLat = ((centerLatitude - latitude) / 0.00001) * rto;
+        double dLng = -1 * ((centerLongitude - longitude) / 0.00001) * rto;
+        int y = (int) Math.round(dLat);
+        int x = (int) Math.round(dLng);
+        return new float[]{x, y};
+    }
+
+    private void loadOpenFreeMapBackground(List<ApplicationsData> applications) {
+        if (applications == null || applications.isEmpty()) {
+            return;
+        }
+        ApplicationsData center = applications.get(applications.size() - 1);
+        if (center.lat == null || center.lng == null) {
+            return;
+        }
+        new Thread(() -> {
+            try {
+                int zoom = 14;
+                int tileX = lonToTileX(center.lng, zoom);
+                int tileY = latToTileY(center.lat, zoom);
+
+                String[] tileTemplates = new String[]{
+                        "https://tiles.openfreemap.org/styles/bright/%d/%d/%d.png",
+                        "https://tiles.openfreemap.org/bright/%d/%d/%d.png",
+                        "https://tile.openstreetmap.org/%d/%d/%d.png"
+                };
+
+                final int tileGrid = 3;
+                final int radius = tileGrid / 2;
+                Bitmap bitmap = null;
+                for (String template : tileTemplates) {
+                    bitmap = tryFetchTileMosaic(template, zoom, tileX, tileY, radius);
+                    if (bitmap != null) {
+                        break;
+                    }
+                }
+
+                if (bitmap != null) {
+                    Bitmap finalBitmap = bitmap;
+                    float tileWorldSize = calculateWorldUnitsPerTile(center.lat, zoom);
+                    float basemapWorldSize = tileWorldSize * tileGrid;
+                    glSurfaceView.queueEvent(() -> {
+                        renderer.setBasemapBitmap(finalBitmap);
+                        renderer.setBasemapWorldSize(basemapWorldSize);
+                    });
+                    glSurfaceView.requestRender();
+                } else {
+                    Log.e(TAG, "Failed to load basemap tile mosaic from all providers.");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load OpenFreeMap tile", e);
+            }
+        }).start();
+    }
+
+    private int lonToTileX(double lon, int zoom) {
+        return (int) Math.floor((lon + 180.0) / 360.0 * (1 << zoom));
+    }
+
+    private int latToTileY(double lat, int zoom) {
+        double latRad = Math.toRadians(lat);
+        return (int) Math.floor((1.0 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2.0 * (1 << zoom));
+    }
+
+    private float calculateWorldUnitsPerTile(double latitude, int zoom) {
+        double metersPerPixel = 156543.03392 * Math.cos(Math.toRadians(latitude)) / (1 << zoom);
+        double metersPerTile = metersPerPixel * 256.0;
+        return (float) (metersPerTile / 0.0254); // world units are inches
+    }
+
+    private Bitmap tryFetchTileMosaic(String template, int zoom, int centerTileX, int centerTileY, int radius) {
+        int gridSize = radius * 2 + 1;
+        Bitmap[][] tiles = new Bitmap[gridSize][gridSize];
+        int tilePixelSize = 256;
+
+        for (int row = -radius; row <= radius; row++) {
+            for (int col = -radius; col <= radius; col++) {
+                int x = normalizeTileX(centerTileX + col, zoom);
+                int y = centerTileY + row;
+                int maxTileY = (1 << zoom) - 1;
+                if (y < 0 || y > maxTileY) {
+                    recycleTiles(tiles);
+                    return null;
+                }
+
+                String tileUrl = String.format(template, zoom, x, y);
+                Bitmap tile = tryFetchTile(tileUrl);
+                if (tile == null) {
+                    recycleTiles(tiles);
+                    return null;
+                }
+
+                if (tile.getWidth() <= 0 || tile.getHeight() <= 0) {
+                    tile.recycle();
+                    recycleTiles(tiles);
+                    return null;
+                }
+
+                tilePixelSize = tile.getWidth();
+                tiles[row + radius][col + radius] = tile;
+            }
+        }
+
+        Bitmap mosaic = Bitmap.createBitmap(tilePixelSize * gridSize, tilePixelSize * gridSize, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(mosaic);
+        for (int row = 0; row < gridSize; row++) {
+            for (int col = 0; col < gridSize; col++) {
+                Bitmap tile = tiles[row][col];
+                if (tile != null) {
+                    canvas.drawBitmap(tile, col * tilePixelSize, row * tilePixelSize, null);
+                    tile.recycle();
+                }
+            }
+        }
+        return mosaic;
+    }
+
+    private void recycleTiles(Bitmap[][] tiles) {
+        for (Bitmap[] row : tiles) {
+            for (Bitmap tile : row) {
+                if (tile != null && !tile.isRecycled()) {
+                    tile.recycle();
+                }
+            }
+        }
+    }
+
+    private int normalizeTileX(int tileX, int zoom) {
+        int maxTiles = 1 << zoom;
+        int normalized = tileX % maxTiles;
+        return normalized < 0 ? normalized + maxTiles : normalized;
+    }
+
+    private Bitmap tryFetchTile(String tileUrl) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(tileUrl).openConnection();
+            connection.setConnectTimeout(7000);
+            connection.setReadTimeout(7000);
+            connection.setRequestProperty("User-Agent", "OnsiteFMS-Mapping/1.0");
+            int responseCode = connection.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                Log.w(TAG, "Tile request failed (" + responseCode + "): " + tileUrl);
+                return null;
+            }
+            try (InputStream stream = connection.getInputStream()) {
+                return BitmapFactory.decodeStream(stream);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Tile request error: " + tileUrl, e);
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
     }
 
     private int parseSettingInt(String key, int fallback) {

@@ -29,4 +29,13 @@ public interface ApplicationsDao {
 
     @Query("DELETE from applications")
     void deleteAll();
+
+    @Query("DELETE from applications WHERE aid=:aid")
+    void deleteApplicationById(int aid);
+
+    @Query("DELETE from applications WHERE lid=:lid")
+    void deleteApplicationsByLid(int lid);
+
+    @Query("SELECT * from applications WHERE lid=:lid ORDER BY aid DESC LIMIT 1")
+    Applications getLastApplicationByLidSync(int lid);
 }

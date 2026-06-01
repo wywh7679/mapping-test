@@ -10,10 +10,14 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.ViewParent;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.widget.TooltipCompat;
@@ -22,6 +26,12 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import androidx.appcompat.widget.SwitchCompat;
+
+import com.google.android.material.tabs.TabLayout;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiConsumer;
 public class SettingsActivity extends BaseActivity {
     private ImageView homeBtn;
@@ -32,8 +42,13 @@ public class SettingsActivity extends BaseActivity {
     private int currentStep = 0;
     private int totalSections;
     private int currentRow = 0;
-    private Button backButton, nextButton, doneButton;
+    private Button wizardBackButton, nextButton, doneButton, closeButton;
     private TableRow[] tableRows;
+    private View vehicleProfilesTabContent;
+    private View vehicleTabContent;
+    private View displayTabContent;
+    private View sprayerTabContent;
+    private boolean suppressProfileSelection = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +71,33 @@ public class SettingsActivity extends BaseActivity {
                 startActivity(intent);
             }
         });
+
+        TabLayout settingsTabs = findViewById(R.id.settings_tabs);
+        vehicleProfilesTabContent = findViewById(R.id.tab_vehicle_profiles_content);
+        vehicleTabContent = findViewById(R.id.tab_vehicle_content);
+        displayTabContent = findViewById(R.id.tab_display_content);
+        sprayerTabContent = findViewById(R.id.tab_sprayer_content);
+
+        settingsTabs.addTab(settingsTabs.newTab().setText("Vehicle Profiles"));
+        settingsTabs.addTab(settingsTabs.newTab().setText("Vehicle Settings"));
+        settingsTabs.addTab(settingsTabs.newTab().setText("Display Settings"));
+        settingsTabs.addTab(settingsTabs.newTab().setText("Sprayer Configuration"));
+        settingsTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                showTab(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
+        bindProfileControls();
+
         Button colorPickerButton = findViewById(R.id.color_picker_button);
         colorPickerButton.setBackgroundColor((int) settings.get("mainPathColor"));
         colorPickerButton.setOnClickListener(new View.OnClickListener() {
@@ -72,6 +114,9 @@ public class SettingsActivity extends BaseActivity {
                 showDynamicColorPickerDialog("thickPathColor", v, true);
             }
         });
+        bindDisplaySettings();
+        applySimplifiedDisplaySettingsVisibility();
+
         EditText thickPathStroke = findViewById(R.id.thickPathStroke);
 
         thickPathStroke.setText(settings.get("thickPathStroke").toString());
@@ -88,21 +133,236 @@ public class SettingsActivity extends BaseActivity {
         // Handle focus change
         totalNumberSections.setOnFocusChangeListener(settingsEditTextFocusListener);
 
-        backButton = findViewById(R.id.back_button);
+        wizardBackButton = findViewById(R.id.back_button);
         nextButton = findViewById(R.id.next_button);
         doneButton = findViewById(R.id.done_button);
-        backButton.setOnClickListener(v -> showPreviousStep());
+        wizardBackButton.setOnClickListener(v -> showPreviousStep());
         nextButton.setOnClickListener(v -> showNextStep());
         doneButton.setOnClickListener(v -> finishWizard());
-        backButton = findViewById(R.id.backButton);
-        backButton.setOnClickListener(new View.OnClickListener() {
+        closeButton = findViewById(R.id.backButton);
+        closeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 finish(); // Closes the current activity and returns to the previous one
             }
         });
+        showTab(0);
         startForm();
     }
+
+    private void applySimplifiedDisplaySettingsVisibility() {
+        if (!USE_SIMPLIFIED_HOME) {
+            return;
+        }
+        hideSettingRowByControlId(R.id.switch_show_field_boundaries);
+        hideSettingRowByControlId(R.id.field_boundary_color_button);
+        hideSettingRowByControlId(R.id.switch_show_basemap);
+        hideSettingRowByControlId(R.id.basemap_opacity);
+    }
+
+    private void hideSettingRowByControlId(int controlId) {
+        View control = findViewById(controlId);
+        if (control == null) {
+            return;
+        }
+        ViewParent parent = control.getParent();
+        if (parent instanceof View) {
+            ((View) parent).setVisibility(View.GONE);
+            return;
+        }
+        control.setVisibility(View.GONE);
+    }
+    private void showTab(int position) {
+        vehicleProfilesTabContent.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
+        vehicleTabContent.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
+        displayTabContent.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+        sprayerTabContent.setVisibility(position == 3 ? View.VISIBLE : View.GONE);
+    }
+
+    private void bindDisplaySettings() {
+        bindThemeSpinner();
+        bindUnitSpinner();
+
+        EditText textScaleInput = findViewById(R.id.text_scale_multiplier);
+        textScaleInput.setText(settings.get("textScaleMultiplier").toString());
+        textScaleInput.setTag("textScaleMultiplier");
+        textScaleInput.setOnEditorActionListener(settingsEditTextListener);
+        textScaleInput.setOnFocusChangeListener(settingsEditTextFocusListener);
+
+        bindToggle(R.id.switch_show_grid, "showGrid", true);
+        bindToggle(R.id.switch_show_background, "showSolidBackground", true);
+        bindToggle(R.id.switch_show_ab_lines, "showABLines", true);
+        bindToggle(R.id.switch_show_steering_lines, "showSteeringLines", true);
+        bindToggle(R.id.switch_show_field_boundaries, "showFieldBoundaries", true);
+        bindToggle(R.id.switch_show_basemap, "showBasemap", false);
+
+        bindColorPickerButton(R.id.grid_color_button, "gridColor", false);
+        bindColorPickerButton(R.id.background_color_button, "backgroundColor", false);
+        bindColorPickerButton(R.id.ab_line_color_button, "abLineColor", false);
+        bindColorPickerButton(R.id.steering_line_color_button, "steeringLineColor", false);
+        bindColorPickerButton(R.id.field_boundary_color_button, "fieldBoundaryColor", false);
+
+        EditText basemapOpacity = findViewById(R.id.basemap_opacity);
+        basemapOpacity.setText(settings.get("basemapOpacity").toString());
+        basemapOpacity.setTag("basemapOpacity");
+        basemapOpacity.setOnEditorActionListener(settingsEditTextListener);
+        basemapOpacity.setOnFocusChangeListener(settingsEditTextFocusListener);
+    }
+
+    private void bindProfileControls() {
+        Spinner profileSpinner = findViewById(R.id.profile_spinner);
+        EditText profileNameInput = findViewById(R.id.profile_name_input);
+        Button profileSaveButton = findViewById(R.id.profile_save_button);
+        Button profileUpdateButton = findViewById(R.id.profile_update_button);
+        Button profileRemoveButton = findViewById(R.id.profile_remove_button);
+
+        List<String> profiles = getSettingsProfiles();
+        if (profiles.isEmpty()) {
+            profiles = new ArrayList<>();
+            profiles.add("default");
+        }
+        final List<String> profileOptions = new ArrayList<>(profiles);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, profileOptions);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        profileSpinner.setAdapter(adapter);
+
+        String activeProfile = getActiveSettingsProfile();
+        int activeIndex = profileOptions.indexOf(activeProfile);
+        if (activeIndex < 0) {
+            activeIndex = 0;
+        }
+        suppressProfileSelection = true;
+        profileSpinner.setSelection(activeIndex, false);
+        suppressProfileSelection = false;
+
+        profileSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (suppressProfileSelection) {
+                    return;
+                }
+                String selectedProfile = profileOptions.get(position);
+                if (selectedProfile.equals(getActiveSettingsProfile())) {
+                    return;
+                }
+                saveSettingsProfileName(selectedProfile);
+                recreate();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        profileSaveButton.setOnClickListener(v -> {
+            String newProfile = profileNameInput.getText() == null ? "" : profileNameInput.getText().toString().trim();
+            if (newProfile.isEmpty()) {
+                Toast.makeText(this, "Enter a vehicle name", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            saveSettingsProfileName(newProfile);
+            Toast.makeText(this, "Vehicle selected: " + newProfile, Toast.LENGTH_SHORT).show();
+            recreate();
+        });
+
+        profileUpdateButton.setOnClickListener(v -> {
+            String currentProfile = getActiveSettingsProfile();
+            String newProfile = profileNameInput.getText() == null ? "" : profileNameInput.getText().toString().trim();
+            if (newProfile.isEmpty()) {
+                Toast.makeText(this, "Enter a new vehicle name", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!renameSettingsProfile(currentProfile, newProfile)) {
+                Toast.makeText(this, "Unable to rename vehicle profile", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Toast.makeText(this, "Vehicle renamed to: " + newProfile, Toast.LENGTH_SHORT).show();
+            recreate();
+        });
+
+        profileRemoveButton.setOnClickListener(v -> {
+            String currentProfile = getActiveSettingsProfile();
+            if (!removeSettingsProfile(currentProfile)) {
+                Toast.makeText(this, "Default vehicle cannot be removed", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Toast.makeText(this, "Vehicle removed: " + currentProfile, Toast.LENGTH_SHORT).show();
+            recreate();
+        });
+    }
+
+    private void bindThemeSpinner() {
+        Spinner themeSpinner = findViewById(R.id.theme_spinner);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
+                new String[]{"Light", "Dark"});
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        themeSpinner.setAdapter(adapter);
+
+        String currentTheme = settings.get("theme").toString();
+        int themePosition = "light".equalsIgnoreCase(currentTheme) ? 0 : 1;
+        themeSpinner.setSelection(themePosition, false);
+        themeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedTheme = position == 0 ? "light" : "dark";
+                if (selectedTheme.equals(settings.get("theme"))) {
+                    return;
+                }
+                settings.put("theme", selectedTheme);
+                putProfileString("theme", selectedTheme);
+                recreate();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+    }
+
+    private void bindUnitSpinner() {
+        Spinner unitSpinner = findViewById(R.id.unit_spinner);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
+                new String[]{"US", "Metric"});
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        unitSpinner.setAdapter(adapter);
+
+        String currentUnits = settings.get("unitSystem").toString();
+        int position = "metric".equalsIgnoreCase(currentUnits) ? 1 : 0;
+        unitSpinner.setSelection(position, false);
+        unitSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int itemPosition, long id) {
+                String selectedUnits = itemPosition == 1 ? "metric" : "us";
+                settings.put("unitSystem", selectedUnits);
+                putProfileString("unitSystem", selectedUnits);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+    }
+
+    private void bindToggle(int switchId, String key, boolean fallback) {
+        SwitchCompat toggle = findViewById(switchId);
+        Object value = settings.get(key);
+        boolean checked = value instanceof Boolean ? (Boolean) value : fallback;
+        toggle.setChecked(checked);
+        toggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            settings.put(key, isChecked);
+            putProfileBoolean(key, isChecked);
+        });
+    }
+
+    private void bindColorPickerButton(int buttonId, String key, boolean withAlpha) {
+        Button button = findViewById(buttonId);
+        Object colorObject = settings.get(key);
+        int color = colorObject instanceof Integer ? (Integer) colorObject : ContextCompat.getColor(this, R.color.white);
+        button.setBackgroundColor(color);
+        button.setOnClickListener(v -> showDynamicColorPickerDialog(key, v, withAlpha));
+    }
+
     private void startForm() {
         Integer sectionTotal = Integer.parseInt(totalNumberSections.getText().toString());
         totalSections = sectionTotal;
@@ -287,7 +547,7 @@ public class SettingsActivity extends BaseActivity {
             int step = Integer.parseInt(tableRows[i].getTag().toString());
             tableRows[i].setVisibility(step == currentStep ? View.VISIBLE : View.GONE);
         }
-        backButton.setVisibility(currentStep > 0 ? View.VISIBLE : View.GONE);
+        wizardBackButton.setVisibility(currentStep > 0 ? View.VISIBLE : View.GONE);
         nextButton.setVisibility(currentStep < totalSections ? View.VISIBLE : View.GONE);
         doneButton.setVisibility(currentStep == totalSections ? View.VISIBLE : View.GONE);
     }

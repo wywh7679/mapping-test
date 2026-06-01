@@ -33,4 +33,18 @@ public class ApplicationsRepository {
     public LiveData<List<Applications>> getAllApplications() {
         return listApplications;
     }
+
+    public void deleteApplicationById(int aid) {
+        LocationsRoomDatabase.databaseWriteExecutor.execute(() -> {
+            applicationsDao.deleteApplicationById(aid);
+            locationsRoomDatabase.applicationsDataDao().deleteByAid(aid);
+        });
+    }
+
+    public void deleteApplicationsByLid(int lid) {
+        LocationsRoomDatabase.databaseWriteExecutor.execute(() -> {
+            applicationsDao.deleteApplicationsByLid(lid);
+            locationsRoomDatabase.applicationsDataDao().deleteByLid(lid);
+        });
+    }
 }

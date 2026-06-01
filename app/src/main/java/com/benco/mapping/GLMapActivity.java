@@ -585,19 +585,28 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         ApplicationsViewModel AppVM = ViewModelProvider.AndroidViewModelFactory.getInstance(this.getApplication()).create(ApplicationsViewModel.class);
 
         AppVM.getApplication(aid).observe(this, applications -> {
+            if (applications == null || applications.isEmpty()) {
+                currentApp = null;
+                currentConfigJson = "";
+                return;
+            }
             currentApp = applications.get(0);
+            currentConfigJson = currentApp.config == null ? "" : currentApp.config;
             //Log.d(TAG, "currentApp: "+currentApp.config);
         });
         AppDataVM = ViewModelProvider.AndroidViewModelFactory.getInstance(this.getApplication()).create(ApplicationsDataViewModel.class);
         AppDataVM.getAllApplicationsFromVm(aid).observe(this, applications -> {
-            sectionStyles = buildSectionStylesFromConfig(currentApp.config);
-            applicationsData = applications;
-            PathGeometry geometry = geometryBuilder.build(applications, sectionStyles);
-            ABLineGeometry abLineGeometry = abLineGeometryBuilder.build(applications, sectionStyles, abLineOffset, abLineYaw);
+            String configJson = currentApp == null || currentApp.config == null ? currentConfigJson : currentApp.config;
+            sectionStyles = buildSectionStylesFromConfig(configJson);
+            applicationsData = applications == null ? new ArrayList<>() : applications;
+            PathGeometry geometry = geometryBuilder.build(applicationsData, sectionStyles);
+            ABLineGeometry abLineGeometry = abLineGeometryBuilder.build(applicationsData, sectionStyles, abLineOffset, abLineYaw);
             List<Point> absPoints = geometryBuilder.getAbsPoints();
             setLabels(absPoints);
-            Point location = absPoints.get(absPoints.size()-1);
-            compass.setRotation(location.bearing);
+            if (!absPoints.isEmpty()) {
+                Point location = absPoints.get(absPoints.size()-1);
+                compass.setRotation(location.bearing);
+            }
             //Log.d(TAG, "geometry: "+absPoints);
             renderer.setAbsPoints(absPoints);
             renderer.setPathGeometry(geometry, sectionStyles);
@@ -627,13 +636,13 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             renderer.setSteeringLineColor(parseSettingColor("steeringLineColor", Color.BLUE));
             renderer.setFieldBoundaryDisplay(parseSettingBoolean("showFieldBoundaries", true));
             renderer.setFieldBoundaryColor(parseSettingColor("fieldBoundaryColor", Color.YELLOW));
-            renderer.setFieldBoundaryGeometry(buildFieldBoundaryGeometry(applications));
+            renderer.setFieldBoundaryGeometry(buildFieldBoundaryGeometry(applicationsData));
             boolean showBasemap = parseSettingBoolean("showBasemap", false);
             float basemapOpacity = parseSettingFloat("basemapOpacity", 0.55f);
             glSurfaceView.queueEvent(() -> renderer.setBasemapDisplay(showBasemap, basemapOpacity));
             glSurfaceView.requestRender();
             if (showBasemap) {
-                loadOpenFreeMapBackground(applications);
+                loadOpenFreeMapBackground(applicationsData);
             }
         });
         AppVM.getAllApplicationsByLid(lid).observe(this, applications -> {
@@ -681,9 +690,11 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         double distance = 0;
         double bearing = 0;
         //double speed = 0;
-        for (int i = 0; i < absPoints.size(); i++) {
-            distance += absPoints.get(i).distance;
-            bearing = absPoints.get(i).bearing;
+        if (absPoints != null) {
+            for (int i = 0; i < absPoints.size(); i++) {
+                distance += absPoints.get(i).distance;
+                bearing = absPoints.get(i).bearing;
+            }
         }
         String distanceText;
         boolean useMetric = isMetricUnits();

@@ -15,9 +15,10 @@ public class PathGeometryBuilder {
     //private static final float DEFAULT_METERS_PER_PIXEL = 0.3048f; //one foot per pixel
     private static final float DEFAULT_METERS_PER_PIXEL = 0.0254f; //one inch per pixel
     private static final int DEFAULT_SAMPLES_PER_SEGMENT = 12;
-    List<Point> absPoints;
+    List<Point> absPoints = new ArrayList<>();
 
     public PathGeometry build(List<ApplicationsData> applications, List<SectionStyle> sectionStyles) {
+        absPoints = new ArrayList<>();
         if (applications == null || applications.size() < 2) {
             return new PathGeometry(new float[0], new ArrayList<>(), new ArrayList<>());
         }
@@ -50,7 +51,7 @@ public class PathGeometryBuilder {
     }
 
     public List<Point> getAbsPoints() {
-        return absPoints;
+        return absPoints == null ? new ArrayList<>() : absPoints;
     }
     private List<Point> buildAbsolutePoints(List<ApplicationsData> applications, float metersPerPixel) {
         ApplicationsData firstApp = applications.get(0);

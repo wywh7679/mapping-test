@@ -151,6 +151,8 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
     LocationsDao locationsDao;
     MyRenderer renderer;
     private Applications currentApp;
+    private LocationListener gpsLocationListener;
+    private boolean pendingStartGpsCapture = false;
     private final PathGeometryBuilder geometryBuilder = new PathGeometryBuilder();
     private final ABLineGeometryBuilder abLineGeometryBuilder = new ABLineGeometryBuilder();
     private String currentConfigJson = "";
@@ -225,11 +227,11 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
 
         createSectionButtons();
 
+        gpsIndicator = findViewById(R.id.gpsIndicator);
         hasGPS = checkLocationPermission();
-        if (hasGPS) {
-            gpsIndicator = findViewById(R.id.gpsIndicator);
-
-            gpsIndicator.setColorFilter(ContextCompat.getColor(this, R.color.white), PorterDuff.Mode.SRC_IN);
+        if (gpsIndicator != null) {
+            int indicatorColor = hasGPS ? R.color.white : R.color.red;
+            gpsIndicator.setColorFilter(ContextCompat.getColor(this, indicatorColor), PorterDuff.Mode.SRC_IN);
 
           /*  Drawable buttonDrawable = gpsIndicator.getBackground();
             buttonDrawable = DrawableCompat.wrap(buttonDrawable);
@@ -239,7 +241,6 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             gpsIndicator.setBackground(buttonDrawable);*/
         }
         Log.d("main activity", "hasGPS: "+hasGPS);
-        if (!hasGPS) return;
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         locationsRoomDatabase = LocationsRoomDatabase.getDatabase(this);
         locationsDao = locationsRoomDatabase.locationsDao();
@@ -387,7 +388,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             String message = isChecked ? "GPS Capture ON" : "GPS Capture OFF";
             //Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
         });
-        LocationListener locationListener =  new LocationListener() {
+        gpsLocationListener =  new LocationListener() {
 
             private Location lastLocation;
             private float lastSpeedTime = 0f;
@@ -471,32 +472,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             }
         };
         toggleGPSImg = findViewById(R.id.toggleGPSCaptureImg);
-        toggleGPSImg.setOnClickListener((View v) -> {
-            gpsClass.captrueGPS = gpsClass.captrueGPS ? false : true;
-            String message = gpsClass.captrueGPS ? "GPS Capture ON" : "GPS Capture OFF";
-            int id = gpsClass.captrueGPS ? getResources().getIdentifier("@android:drawable/ic_media_play", null, null) :getResources().getIdentifier("@android:drawable/ic_media_pause", null, null);
-            toggleGPSImg.setImageResource(id);
-            if (gpsClass.captrueGPS) {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return;
-                }
-                gpsIndicator.setColorFilter(ContextCompat.getColor(this, R.color.green), PorterDuff.Mode.SRC_IN);
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-            } else {
-                gpsIndicator.setColorFilter(ContextCompat.getColor(this, R.color.white), PorterDuff.Mode.SRC_IN);
-                locationManager.removeUpdates(locationListener);
-            }
-            //@android:drawable/ic_media_play
-
-            Toast.makeText(GLMapActivity.this, message, Toast.LENGTH_SHORT).show();
-        });
+        toggleGPSImg.setOnClickListener((View v) -> setGpsCaptureEnabled(!gpsClass.captrueGPS));
         View.OnFocusChangeListener topBarFocusChangeListener = new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
@@ -681,6 +657,89 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         //exportDatabase();
 
     }
+    private void setGpsCaptureEnabled(boolean enabled) {
+        if (gpsClass == null) {
+            gpsClass = new GPS();
+        }
+        if (enabled) {
+            if (!hasLocationPermission()) {
+                pendingStartGpsCapture = true;
+                gpsClass.captrueGPS = false;
+                updateGpsCaptureUi(false);
+                requestLocationPermissions();
+                return;
+            }
+            if (locationManager == null) {
+                locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            }
+            if (locationManager == null || gpsLocationListener == null) {
+                gpsClass.captrueGPS = false;
+                updateGpsCaptureUi(false);
+                Toast.makeText(this, "Unable to start GPS capture.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            boolean updatesRequested = requestLocationUpdatesIfEnabled(LocationManager.GPS_PROVIDER);
+            updatesRequested = requestLocationUpdatesIfEnabled(LocationManager.NETWORK_PROVIDER) || updatesRequested;
+            if (!updatesRequested) {
+                gpsClass.captrueGPS = false;
+                updateGpsCaptureUi(false);
+                Toast.makeText(this, "Turn on GPS/location services to enable mapping", Toast.LENGTH_LONG).show();
+                return;
+            }
+            gpsClass.captrueGPS = true;
+            updateGpsCaptureUi(true);
+            Toast.makeText(GLMapActivity.this, "GPS Capture ON", Toast.LENGTH_SHORT).show();
+        } else {
+            gpsClass.captrueGPS = false;
+            pendingStartGpsCapture = false;
+            if (locationManager != null && gpsLocationListener != null) {
+                locationManager.removeUpdates(gpsLocationListener);
+            }
+            updateGpsCaptureUi(false);
+            Toast.makeText(GLMapActivity.this, "GPS Capture OFF", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private boolean requestLocationUpdatesIfEnabled(String provider) {
+        if (locationManager == null || gpsLocationListener == null || !hasLocationPermission()) {
+            return false;
+        }
+        try {
+            if (!locationManager.isProviderEnabled(provider)) {
+                return false;
+            }
+            locationManager.requestLocationUpdates(provider, 0, 0, gpsLocationListener);
+            return true;
+        } catch (SecurityException | IllegalArgumentException e) {
+            Log.e(TAG, "Unable to request location updates from " + provider, e);
+            return false;
+        }
+    }
+
+    private void updateGpsCaptureUi(boolean enabled) {
+        if (toggleGPSImg != null) {
+            int id = enabled
+                    ? getResources().getIdentifier("@android:drawable/ic_media_play", null, null)
+                    : getResources().getIdentifier("@android:drawable/ic_media_pause", null, null);
+            toggleGPSImg.setImageResource(id);
+        }
+        if (gpsIndicator != null) {
+            int indicatorColor = enabled ? R.color.green : R.color.white;
+            gpsIndicator.setColorFilter(ContextCompat.getColor(this, indicatorColor), PorterDuff.Mode.SRC_IN);
+        }
+    }
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestLocationPermissions() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                PERMISSION_REQUEST_CODE);
+    }
+
     private void updateGridSizeLabel() {
         if (gridSizeLabel != null) {
             gridSizeLabel.setText(renderer.getGridSizeLabel());
@@ -1142,30 +1201,11 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         }
     }
     public boolean checkLocationPermission() {
-        String[] permissions = {
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-        };
-        Boolean hasPermissions = true;
-        List<String> permissionsToRequest = new ArrayList<>();
-        for (String permission : permissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(permission);
-                hasPermissions = false;
-            }
+        if (hasLocationPermission()) {
+            return true;
         }
-
-        if (!permissionsToRequest.isEmpty()) {
-            ActivityCompat.requestPermissions(this,
-                    permissionsToRequest.toArray(new String[0]),
-                    PERMISSION_REQUEST_CODE);
-        } else {
-            // Permissions are already granted, proceed with your logic
-            // e.g., start location updates, access storage
-        }
-        return hasPermissions;
+        requestLocationPermissions();
+        return false;
     }
     public boolean checkLocationPermissionOrig() {
         if (ContextCompat.checkSelfPermission(this,
@@ -1206,34 +1246,21 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case 99: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // permission was granted, yay! Do the
-                    // location-related task you need to do.
-                    if (ContextCompat.checkSelfPermission(this,
-                            Manifest.permission.ACCESS_FINE_LOCATION)
-                            == PackageManager.PERMISSION_GRANTED) {
-
-                        //Request location updates:
-                        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-                        gpsClass = new GPS();
-                        gpsClass.captrueGPS = false;
-                        gpsClass.gps3d(locationManager, this);
-                    }
-
-                } else {
-
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    Toast.makeText(this, "Turn on GPS to enable mapping", Toast.LENGTH_LONG).show();
+        if (requestCode == PERMISSION_REQUEST_CODE || requestCode == 99) {
+            if (hasLocationPermission()) {
+                hasGPS = true;
+                if (gpsIndicator != null) {
+                    gpsIndicator.setColorFilter(ContextCompat.getColor(this, R.color.white), PorterDuff.Mode.SRC_IN);
                 }
-                return;
+                if (pendingStartGpsCapture) {
+                    pendingStartGpsCapture = false;
+                    setGpsCaptureEnabled(true);
+                }
+            } else {
+                pendingStartGpsCapture = false;
+                setGpsCaptureEnabled(false);
+                Toast.makeText(this, "Turn on GPS to enable mapping", Toast.LENGTH_LONG).show();
             }
-
         }
     }
 

@@ -13,7 +13,6 @@ import com.benco.mapping.data.LocationsRoomDatabase;
 import java.util.Date;
 
 public class HomeActivity extends BaseActivity {
-    private static final boolean USE_SIMPLIFIED_HOME = true;
     private static final String DEFAULT_LOCATION_NAME = "Default Location";
 
     Button quickSprayBtn;

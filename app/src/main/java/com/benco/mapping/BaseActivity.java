@@ -47,6 +47,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.ContextCompat;
 
 public class BaseActivity extends AppCompatActivity {
+    protected static final boolean USE_SIMPLIFIED_HOME = true;
     private static final String SETTINGS_PROFILE_KEY = "activeSettingsProfile";
     private static final String SETTINGS_PROFILE_LIST_KEY = "settingsProfiles";
     private static final String DEFAULT_SETTINGS_PROFILE = "default";

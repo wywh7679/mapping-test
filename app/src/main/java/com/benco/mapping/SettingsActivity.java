@@ -17,6 +17,7 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.ViewParent;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.widget.TooltipCompat;
@@ -114,6 +115,7 @@ public class SettingsActivity extends BaseActivity {
             }
         });
         bindDisplaySettings();
+        applySimplifiedDisplaySettingsVisibility();
 
         EditText thickPathStroke = findViewById(R.id.thickPathStroke);
 
@@ -146,6 +148,29 @@ public class SettingsActivity extends BaseActivity {
         });
         showTab(0);
         startForm();
+    }
+
+    private void applySimplifiedDisplaySettingsVisibility() {
+        if (!USE_SIMPLIFIED_HOME) {
+            return;
+        }
+        hideSettingRowByControlId(R.id.switch_show_field_boundaries);
+        hideSettingRowByControlId(R.id.field_boundary_color_button);
+        hideSettingRowByControlId(R.id.switch_show_basemap);
+        hideSettingRowByControlId(R.id.basemap_opacity);
+    }
+
+    private void hideSettingRowByControlId(int controlId) {
+        View control = findViewById(controlId);
+        if (control == null) {
+            return;
+        }
+        ViewParent parent = control.getParent();
+        if (parent instanceof View) {
+            ((View) parent).setVisibility(View.GONE);
+            return;
+        }
+        control.setVisibility(View.GONE);
     }
     private void showTab(int position) {
         vehicleProfilesTabContent.setVisibility(position == 0 ? View.VISIBLE : View.GONE);

@@ -2086,6 +2086,7 @@ class Point extends android.graphics.Point implements Serializable {
     String isSpraying;
     String sectionState1;
     String sectionState2;
+    boolean[] sectionActive;
     String aLine;
     String bLine;
     @Override

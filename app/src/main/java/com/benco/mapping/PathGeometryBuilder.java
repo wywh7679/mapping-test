@@ -4,6 +4,8 @@ import android.util.Log;
 
 import com.benco.mapping.data.ApplicationsData;
 
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -67,10 +69,7 @@ public class PathGeometryBuilder {
         List<Point> zeroPoints = new ArrayList<>();
 
         for (ApplicationsData appData : applications) {
-            if (appData.speed == 0) {
-                continue;
-            }
-            if (appData.lat == 0 || appData.lng == 0) {
+            if (appData.lat == null || appData.lng == null || appData.lat == 0 || appData.lng == 0) {
                 continue;
             }
             Point zpoint = XY(centerLat, centerLng, appData.lat, appData.lng, metersPerPixel, 0, 0);
@@ -94,10 +93,7 @@ public class PathGeometryBuilder {
         lastPoint.lng = 0d;
 
         for (ApplicationsData appData : applications) {
-            if (appData.speed == 0) {
-                continue;
-            }
-            if (appData.lat == 0 || appData.lng == 0) {
+            if (appData.lat == null || appData.lng == null || appData.lat == 0 || appData.lng == 0) {
                 continue;
             }
             Point zpoint = XY(centerLat, centerLng, appData.lat, appData.lng, metersPerPixel, 0, 0);
@@ -113,6 +109,7 @@ public class PathGeometryBuilder {
                     absPoint.y = zpoint.y + yOffset;
                     absPoint.z = 1f;
                     absPoint.bearing = appData.bearing;
+                    applySprayState(absPoint, appData);
                     absPoints.add(absPoint);
                     lastPoint = appData;
                 }
@@ -120,6 +117,35 @@ public class PathGeometryBuilder {
         }
 
         return absPoints;
+    }
+
+    private void applySprayState(Point point, ApplicationsData appData) {
+        point.isSpraying = "0";
+        point.sectionActive = new boolean[16];
+        if (appData == null || appData.isSpraying == null || appData.isSpraying.isEmpty()) {
+            return;
+        }
+        try {
+            JSONObject sprayState = new JSONObject(appData.isSpraying);
+            boolean masterOn = sprayState.optInt("master", 0) == 1;
+            point.isSpraying = masterOn ? "1" : "0";
+            for (int i = 0; i < point.sectionActive.length; i++) {
+                point.sectionActive[i] = masterOn && sprayState.optInt(String.valueOf(i), 0) == 1;
+            }
+            point.sectionState1 = point.sectionActive.length > 0 && point.sectionActive[0] ? "1" : "0";
+            point.sectionState2 = point.sectionActive.length > 1 && point.sectionActive[1] ? "1" : "0";
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to parse spray state: " + appData.isSpraying, e);
+        }
+    }
+
+    private boolean isSectionActive(Point point, int sectionIndex) {
+        return point != null
+                && "1".equals(point.isSpraying)
+                && point.sectionActive != null
+                && sectionIndex >= 0
+                && sectionIndex < point.sectionActive.length
+                && point.sectionActive[sectionIndex];
     }
 
     private List<List<Point>> buildParallelPoints(List<Point> absPoints, List<SectionStyle> sectionStyles) {
@@ -155,19 +181,21 @@ public class PathGeometryBuilder {
                 float leftCenter = leftOffset + width / 2f;
                 float rightCenter = rightOffset + width / 2f;
 
-                double[] leftPoints = rotatePointAboutPoint(point.x, point.y, leftCenter, offsetAngle);
-                Point leftPoint = new Point();
-                leftPoint.x = (float) leftPoints[2];
-                leftPoint.y = (float) leftPoints[3];
-                leftPoint.z = (float) s;
-                parallelPoints.get(s).add(leftPoint);
+                if (isSectionActive(point, s)) {
+                    double[] leftPoints = rotatePointAboutPoint(point.x, point.y, leftCenter, offsetAngle);
+                    Point leftPoint = new Point();
+                    leftPoint.x = (float) leftPoints[2];
+                    leftPoint.y = (float) leftPoints[3];
+                    leftPoint.z = (float) s;
+                    parallelPoints.get(s).add(leftPoint);
 
-                double[] rightPoints = rotatePointAboutPoint(point.x, point.y, rightCenter, offsetAngle);
-                Point rightPoint = new Point();
-                rightPoint.x = (float) rightPoints[0];
-                rightPoint.y = (float) rightPoints[1];
-                rightPoint.z = (float) s;
-                parallelPoints.get(sectionCount + s).add(rightPoint);
+                    double[] rightPoints = rotatePointAboutPoint(point.x, point.y, rightCenter, offsetAngle);
+                    Point rightPoint = new Point();
+                    rightPoint.x = (float) rightPoints[0];
+                    rightPoint.y = (float) rightPoints[1];
+                    rightPoint.z = (float) s;
+                    parallelPoints.get(sectionCount + s).add(rightPoint);
+                }
 
                 leftOffset += width;
                 rightOffset += width;
@@ -178,6 +206,9 @@ public class PathGeometryBuilder {
     }
 
     private void normalizeTangents(List<Point> points) {
+        if (points == null || points.size() < 2) {
+            return;
+        }
         for (int i = 0; i < points.size(); i++) {
             Point point = points.get(i);
             if (i == 0) {

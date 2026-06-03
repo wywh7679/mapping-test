@@ -27,6 +27,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -397,10 +398,11 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             public void onLocationChanged(@NonNull Location location) {
                 //Log.d(TAG, "loc changed: " +location);
                 if (!gpsClass.captrueGPS) return;
-                //Meters per second to MPH
-                double currentSpeed = location.getSpeed()*2.237;
                 double lat = location.getLatitude();
                 double lng = location.getLongitude();
+                double currentSpeed = getSpeedMph(location, lastLocation);
+                float bearing = getBearingDegrees(location, lastLocation);
+                lastLocation = location;
                 int i = 0;
                 String aLine = "0";
                 if (setALineClicked) {
@@ -447,15 +449,15 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                 appData.speed = currentSpeed;
                 appData.dateTime = new Date(location.getTime());
                 appData.azimuth = azimuth;
-                appData.bearing = location.getBearing();
+                appData.bearing = bearing;
                 appData.isSpraying = sprayStates.toString();
                 appData.aLine = aLine;
                 appData.bLine = bLine;
                 appData.timestamp = location.getTime();
                 AppDataVM.insertApplications(appData);
                 speedLabel.setText(formatSpeed(currentSpeed));
-                headingLabel.setText(Math.round(location.getBearing())+"");
-                compass.setRotation(location.getBearing());
+                headingLabel.setText(Math.round(bearing)+"");
+                compass.setRotation(bearing);
                 // Toast.makeText(MainActivity.getAppContext(), "Location Changed " + lat + " " + lng + " " + currentSpeed+" "+azimuth, Toast.LENGTH_SHORT).show();
 
                 //}
@@ -678,9 +680,9 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                 Toast.makeText(this, "Unable to start GPS capture.", Toast.LENGTH_LONG).show();
                 return;
             }
-            boolean updatesRequested = requestLocationUpdatesIfEnabled(LocationManager.GPS_PROVIDER);
-            updatesRequested = requestLocationUpdatesIfEnabled(LocationManager.NETWORK_PROVIDER) || updatesRequested;
-            if (!updatesRequested) {
+            boolean updatesRequested = requestEnabledLocationUpdates();
+            Location lastKnownLocation = getBestLastKnownLocation();
+            if (!updatesRequested && lastKnownLocation == null) {
                 gpsClass.captrueGPS = false;
                 updateGpsCaptureUi(false);
                 Toast.makeText(this, "Turn on GPS/location services to enable mapping", Toast.LENGTH_LONG).show();
@@ -688,6 +690,9 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             }
             gpsClass.captrueGPS = true;
             updateGpsCaptureUi(true);
+            if (lastKnownLocation != null) {
+                gpsLocationListener.onLocationChanged(lastKnownLocation);
+            }
             Toast.makeText(GLMapActivity.this, "GPS Capture ON", Toast.LENGTH_SHORT).show();
         } else {
             gpsClass.captrueGPS = false;
@@ -700,20 +705,81 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         }
     }
 
-    private boolean requestLocationUpdatesIfEnabled(String provider) {
+    private boolean requestEnabledLocationUpdates() {
         if (locationManager == null || gpsLocationListener == null || !hasLocationPermission()) {
+            return false;
+        }
+        boolean updatesRequested = false;
+        try {
+            List<String> enabledProviders = locationManager.getProviders(true);
+            for (String provider : enabledProviders) {
+                updatesRequested = requestLocationUpdatesIfEnabled(provider) || updatesRequested;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Unable to enumerate enabled location providers", e);
+        }
+        updatesRequested = requestLocationUpdatesIfEnabled(LocationManager.GPS_PROVIDER) || updatesRequested;
+        updatesRequested = requestLocationUpdatesIfEnabled(LocationManager.NETWORK_PROVIDER) || updatesRequested;
+        return updatesRequested;
+    }
+
+    private boolean requestLocationUpdatesIfEnabled(String provider) {
+        if (locationManager == null || gpsLocationListener == null || !hasLocationPermission() || provider == null) {
             return false;
         }
         try {
             if (!locationManager.isProviderEnabled(provider)) {
                 return false;
             }
-            locationManager.requestLocationUpdates(provider, 0, 0, gpsLocationListener);
+            locationManager.requestLocationUpdates(provider, 1000L, 0f, gpsLocationListener, Looper.getMainLooper());
             return true;
         } catch (SecurityException | IllegalArgumentException e) {
             Log.e(TAG, "Unable to request location updates from " + provider, e);
             return false;
         }
+    }
+
+    private Location getBestLastKnownLocation() {
+        if (locationManager == null || !hasLocationPermission()) {
+            return null;
+        }
+        Location bestLocation = null;
+        try {
+            List<String> providers = locationManager.getProviders(true);
+            for (String provider : providers) {
+                Location location = locationManager.getLastKnownLocation(provider);
+                if (location != null && (bestLocation == null || location.getTime() > bestLocation.getTime())) {
+                    bestLocation = location;
+                }
+            }
+        } catch (SecurityException | IllegalArgumentException e) {
+            Log.e(TAG, "Unable to read last known location", e);
+        }
+        return bestLocation;
+    }
+
+    private double getSpeedMph(Location location, Location previousLocation) {
+        if (location.hasSpeed()) {
+            return location.getSpeed() * 2.2369362921d;
+        }
+        if (previousLocation != null) {
+            long elapsedMillis = location.getTime() - previousLocation.getTime();
+            if (elapsedMillis > 0) {
+                double metersPerSecond = location.distanceTo(previousLocation) / (elapsedMillis / 1000d);
+                return metersPerSecond * 2.2369362921d;
+            }
+        }
+        return 0d;
+    }
+
+    private float getBearingDegrees(Location location, Location previousLocation) {
+        if (location.hasBearing()) {
+            return location.getBearing();
+        }
+        if (previousLocation != null && location.distanceTo(previousLocation) > 0f) {
+            return previousLocation.bearingTo(location);
+        }
+        return 0f;
     }
 
     private void updateGpsCaptureUi(boolean enabled) {

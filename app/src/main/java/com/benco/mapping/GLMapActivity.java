@@ -27,6 +27,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.Spannable;
@@ -154,6 +155,11 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
     private Applications currentApp;
     private LocationListener gpsLocationListener;
     private boolean pendingStartGpsCapture = false;
+    private final Handler locationPollHandler = new Handler(Looper.getMainLooper());
+    private Runnable locationPollRunnable;
+    private long lastProcessedLocationTime = Long.MIN_VALUE;
+    private double lastProcessedLatitude = Double.NaN;
+    private double lastProcessedLongitude = Double.NaN;
     private final PathGeometryBuilder geometryBuilder = new PathGeometryBuilder();
     private final ABLineGeometryBuilder abLineGeometryBuilder = new ABLineGeometryBuilder();
     private String currentConfigJson = "";
@@ -361,6 +367,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
         });
         aidText = new MutableLiveData<>();
 
+        AppDataVM = ViewModelProvider.AndroidViewModelFactory.getInstance(this.getApplication()).create(ApplicationsDataViewModel.class);
         gpsClass = new GPS();
         gpsClass.captrueGPS = false;
         gpsClass.gps3d(locationManager, this);
@@ -397,11 +404,15 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             @Override
             public void onLocationChanged(@NonNull Location location) {
                 //Log.d(TAG, "loc changed: " +location);
-                if (!gpsClass.captrueGPS) return;
+                if (!gpsClass.captrueGPS || !shouldProcessLocation(location)) return;
+                if (AppDataVM == null) {
+                    AppDataVM = ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()).create(ApplicationsDataViewModel.class);
+                }
                 double lat = location.getLatitude();
                 double lng = location.getLongitude();
                 double currentSpeed = getSpeedMph(location, lastLocation);
                 float bearing = getBearingDegrees(location, lastLocation);
+                long locationTime = location.getTime() > 0 ? location.getTime() : System.currentTimeMillis();
                 lastLocation = location;
                 int i = 0;
                 String aLine = "0";
@@ -447,13 +458,13 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                 appData.lat = lat;
                 appData.lng = lng;
                 appData.speed = currentSpeed;
-                appData.dateTime = new Date(location.getTime());
+                appData.dateTime = new Date(locationTime);
                 appData.azimuth = azimuth;
                 appData.bearing = bearing;
                 appData.isSpraying = sprayStates.toString();
                 appData.aLine = aLine;
                 appData.bLine = bLine;
-                appData.timestamp = location.getTime();
+                appData.timestamp = (float) locationTime;
                 AppDataVM.insertApplications(appData);
                 speedLabel.setText(formatSpeed(currentSpeed));
                 headingLabel.setText(Math.round(bearing)+"");
@@ -572,7 +583,6 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             currentConfigJson = currentApp.config == null ? "" : currentApp.config;
             //Log.d(TAG, "currentApp: "+currentApp.config);
         });
-        AppDataVM = ViewModelProvider.AndroidViewModelFactory.getInstance(this.getApplication()).create(ApplicationsDataViewModel.class);
         AppDataVM.getAllApplicationsFromVm(aid).observe(this, applications -> {
             String configJson = currentApp == null || currentApp.config == null ? currentConfigJson : currentApp.config;
             sectionStyles = buildSectionStylesFromConfig(configJson);
@@ -693,6 +703,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             if (lastKnownLocation != null) {
                 gpsLocationListener.onLocationChanged(lastKnownLocation);
             }
+            startLocationPollingFallback();
             Toast.makeText(GLMapActivity.this, "GPS Capture ON", Toast.LENGTH_SHORT).show();
         } else {
             gpsClass.captrueGPS = false;
@@ -700,6 +711,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             if (locationManager != null && gpsLocationListener != null) {
                 locationManager.removeUpdates(gpsLocationListener);
             }
+            stopLocationPollingFallback();
             updateGpsCaptureUi(false);
             Toast.makeText(GLMapActivity.this, "GPS Capture OFF", Toast.LENGTH_SHORT).show();
         }
@@ -732,6 +744,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
                 return false;
             }
             locationManager.requestLocationUpdates(provider, 1000L, 0f, gpsLocationListener, Looper.getMainLooper());
+            locationManager.requestSingleUpdate(provider, gpsLocationListener, Looper.getMainLooper());
             return true;
         } catch (SecurityException | IllegalArgumentException e) {
             Log.e(TAG, "Unable to request location updates from " + provider, e);
@@ -780,6 +793,49 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
             return previousLocation.bearingTo(location);
         }
         return 0f;
+    }
+
+    private boolean shouldProcessLocation(Location location) {
+        if (location == null || location.getLatitude() == 0d || location.getLongitude() == 0d) {
+            return false;
+        }
+        long locationTime = location.getTime() > 0 ? location.getTime() : System.currentTimeMillis();
+        boolean sameTime = locationTime == lastProcessedLocationTime;
+        boolean samePosition = Double.compare(location.getLatitude(), lastProcessedLatitude) == 0
+                && Double.compare(location.getLongitude(), lastProcessedLongitude) == 0;
+        if (sameTime && samePosition) {
+            return false;
+        }
+        lastProcessedLocationTime = locationTime;
+        lastProcessedLatitude = location.getLatitude();
+        lastProcessedLongitude = location.getLongitude();
+        return true;
+    }
+
+    private void startLocationPollingFallback() {
+        if (locationPollRunnable != null) {
+            locationPollHandler.removeCallbacks(locationPollRunnable);
+        }
+        locationPollRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (gpsClass != null && gpsClass.captrueGPS && gpsLocationListener != null) {
+                    Location location = getBestLastKnownLocation();
+                    if (location != null) {
+                        gpsLocationListener.onLocationChanged(location);
+                    }
+                    locationPollHandler.postDelayed(this, 2000L);
+                }
+            }
+        };
+        locationPollHandler.postDelayed(locationPollRunnable, 2000L);
+    }
+
+    private void stopLocationPollingFallback() {
+        if (locationPollRunnable != null) {
+            locationPollHandler.removeCallbacks(locationPollRunnable);
+            locationPollRunnable = null;
+        }
     }
 
     private void updateGpsCaptureUi(boolean enabled) {
@@ -1213,6 +1269,9 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
 
     protected void onResume() {
         super.onResume();
+        if (gpsClass != null && gpsClass.captrueGPS) {
+            startLocationPollingFallback();
+        }
         if (sensorManager != null) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
             sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_UI);
@@ -1221,6 +1280,7 @@ public class GLMapActivity extends BaseActivity implements SensorEventListener {
 
     protected void onPause() {
         super.onPause();
+        stopLocationPollingFallback();
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
